@@ -186,10 +186,6 @@ export default function RoomVisualizer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 text-xs font-semibold mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            <span>Interactive Wall Colour Studio</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             Room Colour Visualizer
           </h2>

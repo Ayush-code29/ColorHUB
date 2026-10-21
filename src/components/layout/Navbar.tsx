@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useStore } from '@/context/StoreContext';
 import {
   Search,
   ShoppingBag,
@@ -13,8 +12,10 @@ import {
   Menu,
   X,
   Palette,
+  ArrowUpRight,
   ArrowRight,
 } from 'lucide-react';
+import { useStore } from '@/context/StoreContext';
 
 export default function Navbar() {
   const {
@@ -31,245 +32,397 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Search filter
   const searchResults = searchQuery.trim()
-    ? colors.filter(
-        (c) =>
-          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          c.category.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? colors
+        .filter((color) => {
+          const query = searchQuery.trim().toLowerCase();
+          return (
+            color.name.toLowerCase().includes(query) ||
+            color.code.toLowerCase().includes(query) ||
+            color.brand.toLowerCase().includes(query) ||
+            color.category.toLowerCase().includes(query)
+          );
+        })
+        .slice(0, 6)
     : [];
 
-  return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform">
-              <Palette className="w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-extrabold tracking-tight text-slate-900 leading-none">
-                Color<span className="text-amber-600">Hub</span>
-              </span>
-              <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase mt-0.5">
-                Luxury Paints &amp; Decor
-              </span>
-            </div>
-          </Link>
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-600">
-            <Link href="/" className="hover:text-amber-600 transition-colors">
-              Home
-            </Link>
-            <a href="#brands-section" className="hover:text-amber-600 transition-colors">
-              Brands
-            </a>
-            <a href="#colours-section" className="hover:text-amber-600 transition-colors">
-              Colours
-            </a>
-            <a href="#inspiration-section" className="hover:text-amber-600 transition-colors">
-              Inspiration
-            </a>
-            <a href="#room-visualizer" className="hover:text-amber-600 transition-colors flex items-center gap-1">
-              <span>Visualizer</span>
-              <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.2 rounded font-bold uppercase">
-                AI
-              </span>
-            </a>
-            <button
-              onClick={openCalculatorModal}
-              className="hover:text-amber-600 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <Calculator className="w-3.5 h-3.5 text-slate-400" />
-              <span>Calculator</span>
-            </button>
-            <a href="#offers-section" className="hover:text-amber-600 transition-colors text-amber-600">
-              Offers
-            </a>
-          </nav>
+  const navLinkClass =
+    'inline-flex h-11 items-center whitespace-nowrap border-b-2 border-transparent px-1 text-[13px] font-medium text-slate-600 transition-colors hover:border-amber-600 hover:text-slate-950';
 
-          {/* Search Bar with live autocomplete */}
-          <div className="hidden lg:block relative flex-1 max-w-xs">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search colours, brands, codes..."
-                value={searchQuery}
-                onFocus={() => setIsSearchOpen(true)}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setIsSearchOpen(true);
-                }}
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+  const openSearchResult = (color: (typeof colors)[number]) => {
+    openProductModal(color);
+    setSearchQuery('');
+    setIsSearchOpen(false);
+    closeMobileMenu();
+  };
+
+  const renderSearchBox = (mobile = false) => (
+    <div className={`relative ${mobile ? 'w-full' : 'w-full'}`}>
+      <form
+        role="search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (searchResults.length > 0) {
+            openSearchResult(searchResults[0]);
+          } else if (searchQuery.trim()) {
+            document.getElementById('colours-section')?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start',
+            });
+            setIsSearchOpen(false);
+          }
+        }}
+        className={`group flex h-11 items-center gap-3 rounded-xl border bg-white px-3.5 transition-all focus-within:border-amber-500 focus-within:ring-4 focus-within:ring-amber-500/10 ${
+          isSearchOpen && searchQuery.trim()
+            ? 'border-amber-400'
+            : 'border-slate-200 hover:border-slate-300'
+        }`}
+      >
+        <Search className="h-[18px] w-[18px] shrink-0 text-slate-400 transition-colors group-focus-within:text-amber-700" />
+        <input
+          type="search"
+          value={searchQuery}
+          onFocus={() => setIsSearchOpen(true)}
+          onChange={(event) => {
+            setSearchQuery(event.target.value);
+            setIsSearchOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setIsSearchOpen(false);
+          }}
+          placeholder="Search colours, brands or shade codes"
+          aria-label="Search colours, brands or shade codes"
+          aria-expanded={isSearchOpen && Boolean(searchQuery.trim())}
+          className="min-w-0 flex-1 bg-transparent text-[13px] font-medium text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-400"
+        />
+        {searchQuery ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setIsSearchOpen(true);
+            }}
+            aria-label="Clear search"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : (
+          !mobile && (
+            <span className="hidden shrink-0 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 xl:inline">
+              Search
+            </span>
+          )
+        )}
+      </form>
+
+      {isSearchOpen && searchQuery.trim() && (
+        <>
+          <button
+            type="button"
+            aria-label="Close search suggestions"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setIsSearchOpen(false)}
+          />
+          <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_50px_-18px_rgba(15,23,42,0.28)]">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                {searchResults.length > 0 ? 'Matching shades' : 'No exact matches'}
+              </span>
+              {searchResults.length > 0 && (
+                <span className="text-xs tabular-nums text-slate-400">
+                  {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
+                </span>
               )}
             </div>
 
-            {/* Autocomplete Dropdown */}
-            {isSearchOpen && searchResults.length > 0 && (
-              <div
-                className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 max-h-80 overflow-y-auto"
-                onMouseLeave={() => setIsSearchOpen(false)}
-              >
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">
-                  Matching Shades ({searchResults.length})
-                </div>
-                {searchResults.slice(0, 5).map((color) => (
+            {searchResults.length > 0 ? (
+              <div className="max-h-80 overflow-y-auto p-2">
+                {searchResults.map((color) => (
                   <button
                     key={color.id}
-                    onClick={() => {
-                      openProductModal(color);
-                      setIsSearchOpen(false);
-                      setSearchQuery('');
-                    }}
-                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 text-left transition-colors"
+                    type="button"
+                    onClick={() => openSearchResult(color)}
+                    className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
                   >
-                    <div
-                      className="w-8 h-8 rounded-lg border border-black/10 shrink-0 shadow-xs"
+                    <span
+                      className="h-10 w-10 shrink-0 rounded-lg border border-black/10 shadow-sm"
                       style={{ backgroundColor: color.hex }}
+                      aria-hidden="true"
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-slate-900 truncate">{color.name}</div>
-                      <div className="text-[11px] text-slate-500">{color.brand} • {color.code}</div>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-800">₹{color.pricePer4L}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-slate-900">
+                        {color.name}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-slate-500">
+                        {color.brand} <span className="px-1 text-slate-300">/</span> {color.code}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold text-slate-800">
+                      ₹{color.pricePer4L}
+                    </span>
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400" />
                   </button>
                 ))}
               </div>
+            ) : (
+              <div className="px-4 py-5">
+                <p className="text-sm text-slate-600">
+                  Try a shade name, brand name or colour code.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    document.getElementById('colours-section')?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start',
+                    });
+                  }}
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-amber-800 hover:text-amber-950"
+                >
+                  Explore all colours <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
             )}
           </div>
+        </>
+      )}
+    </div>
+  );
 
-          {/* Right Action Icons & Admin Button */}
-          <div className="flex items-center gap-2.5">
-            {/* Consultation Free Pill */}
+  return (
+    <header className="sticky top-0 z-40 border-b border-slate-200/90 bg-white">
+      {/* Primary header: brand, search and key actions */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 xl:px-10">
+        <div className="grid min-h-[76px] grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 py-3 lg:grid-cols-[220px_minmax(240px,1fr)_auto] lg:gap-x-8 lg:py-0">
+          {/* Brand */}
+          <Link
+            href="/"
+            aria-label="ColorHub home"
+            className="group flex w-fit min-w-0 items-center gap-3"
+            onClick={closeMobileMenu}
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[14px] bg-amber-700 text-white shadow-sm transition-colors group-hover:bg-amber-800">
+              <Palette className="h-[21px] w-[21px]" strokeWidth={1.8} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[21px] font-extrabold leading-6 tracking-[-0.055em] text-slate-950">
+                Color<span className="text-amber-700">Hub</span>
+              </span>
+              <span className="mt-1 block whitespace-nowrap text-[9px] font-semibold uppercase leading-none tracking-[0.13em] text-slate-500">
+                Luxury paints &amp; decor
+              </span>
+            </span>
+          </Link>
+
+          {/* Desktop search: dedicated space, never squeezed between nav links */}
+          <div className="hidden min-w-0 lg:block">
+            {renderSearchBox()}
+          </div>
+
+          {/* Primary actions */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
             <button
+              type="button"
               onClick={openConsultationModal}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition-colors"
+              className="hidden h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 text-[12px] font-semibold text-amber-900 transition-colors hover:border-amber-300 hover:bg-amber-100 xl:inline-flex"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>Free Consultation</span>
+              <Sparkles className="h-4 w-4 text-amber-700" strokeWidth={1.8} />
+              Free consultation
             </button>
 
-            {/* Wishlist Button */}
-            <a
-              href="#colours-section"
-              className="relative p-2.5 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
-              title="Saved Shades"
-            >
-              <Heart className="w-5 h-5" />
-              {wishlist.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {wishlist.length}
-                </span>
-              )}
-            </a>
-
-            {/* Cart Button */}
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2.5 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
-              title="Shopping Cart"
-            >
-              <ShoppingBag className="w-5 h-5" />
-              {cartItemsCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-amber-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs">
-                  {cartItemsCount}
-                </span>
-              )}
-            </button>
-
-            {/* Admin Portal Link */}
             <Link
-              href="/admin"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all"
+              href="#colours-section"
+              aria-label={`Saved shades${wishlist.length ? `, ${wishlist.length} saved` : ''}`}
+              title="Saved shades"
+              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
             >
-              <LayoutDashboard className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Admin Portal</span>
+              <Heart className="h-[19px] w-[19px]" strokeWidth={1.8} />
+              {wishlist.length > 0 && (
+                <span className="absolute right-0.5 top-0.5 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                  {wishlist.length > 9 ? '9+' : wishlist.length}
+                </span>
+              )}
             </Link>
 
-            {/* Mobile Hamburger */}
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-slate-600 hover:text-slate-900"
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              aria-label={`Shopping bag${cartItemsCount ? `, ${cartItemsCount} items` : ''}`}
+              title="Shopping bag"
+              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
             >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              <ShoppingBag className="h-[19px] w-[19px]" strokeWidth={1.8} />
+              {cartItemsCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 grid h-[17px] min-w-[17px] place-items-center rounded-full bg-amber-700 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                  {cartItemsCount > 9 ? '9+' : cartItemsCount}
+                </span>
+              )}
             </button>
+
+            <Link
+              href="/admin"
+              className="ml-1 hidden h-10 shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-3.5 text-[12px] font-semibold text-white transition-colors hover:bg-slate-800 sm:inline-flex"
+            >
+              <LayoutDashboard className="h-4 w-4 text-amber-400" strokeWidth={1.8} />
+              <span>Admin Portal</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isMobileMenuOpen}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-700 transition-colors hover:bg-slate-50 sm:hidden"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+
+          {/* Tablet search gets its own full-width row */}
+          <div className="col-span-2 min-w-0 lg:hidden">
+            {renderSearchBox(true)}
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu Drawer */}
+      {/* Secondary navigation: its own row keeps every link readable */}
+      <div className="hidden border-t border-slate-100 lg:block">
+        <div className="mx-auto flex h-11 max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-6 xl:px-10">
+          <nav aria-label="Main navigation" className="flex min-w-0 items-center gap-6 xl:gap-8">
+            <Link href="/" className={navLinkClass}>
+              Home
+            </Link>
+            <a href="#brands-section" className={navLinkClass}>
+              Brands
+            </a>
+            <a href="#colours-section" className={navLinkClass}>
+              Colours
+            </a>
+            <a href="#inspiration-section" className={navLinkClass}>
+              Inspiration
+            </a>
+            <a href="#room-visualizer" className={`${navLinkClass} gap-2`}>
+              Visualizer
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">
+                AI
+              </span>
+            </a>
+            <button
+              type="button"
+              onClick={openCalculatorModal}
+              className={`${navLinkClass} gap-2`}
+            >
+              <Calculator className="h-4 w-4 text-slate-400" strokeWidth={1.8} />
+              Calculator
+            </button>
+            <a
+              href="#offers-section"
+              className={`${navLinkClass} hover:border-amber-600 hover:text-amber-800`}
+            >
+              Offers
+            </a>
+          </nav>
+          <button
+            type="button"
+            onClick={openConsultationModal}
+            className="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-slate-600 transition-colors hover:text-amber-800 xl:hidden"
+          >
+            <Sparkles className="h-4 w-4 text-amber-700" />
+            Free consultation
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile and tablet navigation */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-6 space-y-3">
-          <div className="space-y-1">
+        <div className="border-t border-slate-200 bg-white px-4 pb-5 pt-3 shadow-lg sm:px-6 lg:hidden">
+          <nav aria-label="Mobile navigation" className="space-y-1">
             <Link
               href="/"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg"
+              onClick={closeMobileMenu}
+              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
             >
               Home
             </Link>
             <a
               href="#brands-section"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg"
+              onClick={closeMobileMenu}
+              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
             >
-              Top Brands
+              Brands
             </a>
             <a
               href="#colours-section"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg"
+              onClick={closeMobileMenu}
+              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
             >
-              Explore Colours
-            </a>
-            <a
-              href="#room-visualizer"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg"
-            >
-              Room Colour Visualizer (AI)
+              Explore colours
             </a>
             <a
               href="#inspiration-section"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg"
+              onClick={closeMobileMenu}
+              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
             >
-              Inspiration Gallery
+              Inspiration gallery
+            </a>
+            <a
+              href="#room-visualizer"
+              onClick={closeMobileMenu}
+              className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
+            >
+              Room visualizer
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">
+                AI
+              </span>
             </a>
             <button
+              type="button"
               onClick={() => {
-                setIsMobileMenuOpen(false);
+                closeMobileMenu();
                 openCalculatorModal();
               }}
-              className="w-full text-left px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 rounded-lg flex items-center justify-between"
+              className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
             >
-              <span>Room Paint Calculator</span>
-              <Calculator className="w-4 h-4 text-slate-400" />
+              Paint calculator
+              <Calculator className="h-4 w-4 text-slate-400" />
             </button>
+            <a
+              href="#offers-section"
+              onClick={closeMobileMenu}
+              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
+            >
+              Offers
+            </a>
+          </nav>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-4 sm:grid-cols-2">
             <button
+              type="button"
               onClick={() => {
-                setIsMobileMenuOpen(false);
+                closeMobileMenu();
                 openConsultationModal();
               }}
-              className="w-full text-left px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50 rounded-lg flex items-center justify-between"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100"
             >
-              <span>Book Free Consultation</span>
-              <Sparkles className="w-4 h-4 text-amber-500" />
+              <Sparkles className="h-4 w-4" />
+              Free consultation
             </button>
+            <Link
+              href="/admin"
+              onClick={closeMobileMenu}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+            >
+              <LayoutDashboard className="h-4 w-4 text-amber-400" />
+              Admin Portal
+            </Link>
           </div>
         </div>
       )}
