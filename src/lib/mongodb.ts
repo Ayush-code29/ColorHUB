@@ -3,10 +3,6 @@ import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI in .env.local");
-}
-
 type MongooseCache = {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -29,8 +25,13 @@ export async function connectDB() {
     return cache.conn;
   }
 
+  const uri = process.env.MONGODB_URI || MONGODB_URI;
+  if (!uri) {
+    throw new Error("Missing MONGODB_URI environment variable");
+  }
+
   if (!cache.promise) {
-    cache.promise = mongoose.connect(MONGODB_URI);
+    cache.promise = mongoose.connect(uri);
   }
 
   try {

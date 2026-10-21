@@ -102,6 +102,7 @@ const PaintColorSchema = new Schema(
   {
     timestamps: true,
     versionKey: false,
+    suppressReservedKeysWarning: true,
   }
 );
 
