@@ -515,10 +515,17 @@ export function StoreProvider({
   };
 
   // Delete a brand through the protected backend API.
+  
+  // Delete a brand and all its associated colours.
   const deleteBrand = async (
     id: string
   ): Promise<boolean> => {
     try {
+      // Find the brand before deleting it, for cart cleanup.
+      const brandToDelete = brands.find(
+        (brand) => brand.id === id
+      );
+
       const response = await fetch(
         `/api/admin/brands/${encodeURIComponent(id)}`,
         {
@@ -535,12 +542,92 @@ export function StoreProvider({
         );
       }
 
+      // Identify all colours belonging to this brand.
+      const deletedColors = colors.filter((color) => {
+        const paintColor = color as PaintColor & {
+          brandId?: string;
+        };
+
+        return (
+          paintColor.brandId === id ||
+          (
+            !!brandToDelete &&
+            color.brand === brandToDelete.name
+          )
+        );
+      });
+
+      const deletedColorIds = new Set(
+        deletedColors.map((color) => color.id)
+      );
+
+      // Remove the brand from frontend state.
       setBrands((current) =>
         current.filter((brand) => brand.id !== id)
       );
 
+      // Remove all its colours from frontend state.
+      setColors((current) =>
+        current.filter((color) => !deletedColorIds.has(color.id))
+      );
+
+      // Remove deleted colours from the wishlist.
+      setWishlist((current) => {
+        const updated = current.filter(
+          (colorId) => !deletedColorIds.has(colorId)
+        );
+
+        try {
+          localStorage.setItem(
+            "colorhub_wishlist",
+            JSON.stringify(updated)
+          );
+        } catch (storageError) {
+          console.error(
+            "Failed to update saved wishlist:",
+            storageError
+          );
+        }
+
+        return updated;
+      });
+
+      // Remove deleted colours from the cart.
+      setCart((current) => {
+        const updated = current.filter(
+          (item) => !deletedColorIds.has(item.colorId)
+        );
+
+        try {
+          localStorage.setItem(
+            "colorhub_cart",
+            JSON.stringify(updated)
+          );
+        } catch (storageError) {
+          console.error(
+            "Failed to update saved cart:",
+            storageError
+          );
+        }
+
+        return updated;
+      });
+
+      // Select another colour if the selected one was deleted.
+      setSelectedVisualizerColor((current) => {
+        if (!deletedColorIds.has(current.id)) {
+          return current;
+        }
+
+        return (
+          colors.find(
+            (color) => !deletedColorIds.has(color.id)
+          ) ?? INITIAL_COLORS[0]
+        );
+      });
+
       showToast(
-        result.message || "Brand deleted successfully.",
+        result.message || "Brand and associated colours deleted successfully.",
         "success"
       );
 
@@ -556,6 +643,7 @@ export function StoreProvider({
       return false;
     }
   };
+
 
   const addToCart = (itemData: Omit<CartItem, "id">) => {
     const existingIndex = cart.findIndex(

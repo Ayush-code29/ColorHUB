@@ -33,14 +33,11 @@ const PRESET_IMAGES = [
 ];
 
 const PAINT_CATEGORIES = [
-  'Emulsion',
-  'Enamel',
-  'Primer',
-  'Putty',
-  'Waterproofing',
-  'Texture',
-  'Wood & Metal',
-  'Other',
+  "Emulsion",
+  "Enamel",
+  "Distemper",
+  "Acrylic",
+  "Cement",
 ];
 
 type BrandOption = {
