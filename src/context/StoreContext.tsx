@@ -41,6 +41,14 @@ interface ModalState {
   data?: any;
 }
 
+interface NewBrandData {
+  name: string;
+  tagline?: string;
+  logoUrl?: string;
+  accentColor?: string;
+  popularSeries?: string;
+}
+
 interface StoreContextType {
   colors: PaintColor[];
   brands: BrandInfo[];
@@ -66,7 +74,6 @@ interface StoreContextType {
     type?: "success" | "info" | "error"
   ) => void;
 
-  // Catalogue CRUD actions
   addColor: (
     color: Omit<PaintColor, "id">
   ) => Promise<boolean>;
@@ -76,7 +83,9 @@ interface StoreContextType {
   ) => Promise<boolean>;
   deleteColor: (id: string) => Promise<boolean>;
 
-  // Cart
+  addBrand: (data: NewBrandData) => Promise<boolean>;
+  deleteBrand: (id: string) => Promise<boolean>;
+
   addToCart: (item: Omit<CartItem, "id">) => void;
   removeFromCart: (id: string) => void;
   updateCartQty: (id: string, delta: number) => void;
@@ -84,17 +93,16 @@ interface StoreContextType {
   cartTotal: number;
   cartItemsCount: number;
 
-  // Wishlist
   toggleWishlist: (colorId: string) => void;
   isWishlisted: (colorId: string) => boolean;
 
-  // Consultations and orders
   bookConsultation: (
     data: Omit<
       ConsultationInquiry,
       "id" | "createdAt" | "status"
     >
   ) => void;
+
   placeOrder: (
     customer: {
       name: string;
@@ -103,6 +111,7 @@ interface StoreContextType {
       address: string;
     }
   ) => Order | null;
+
   updateOrderStatus: (
     orderId: string,
     status: Order["status"]
@@ -121,7 +130,7 @@ export function StoreProvider({
   const [colors, setColors] =
     useState<PaintColor[]>(INITIAL_COLORS);
 
-  const [brands] =
+  const [brands, setBrands] =
     useState<BrandInfo[]>(INITIAL_BRANDS);
 
   const [inspirations] =
@@ -138,6 +147,7 @@ export function StoreProvider({
     useState<ConsultationInquiry[]>(INITIAL_INQUIRIES);
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+
   const [modal, setModal] = useState<ModalState>({
     type: null,
   });
@@ -148,10 +158,26 @@ export function StoreProvider({
   const [toast, setToast] =
     useState<ToastState | null>(null);
 
-  // Load catalogue from the backend.
-  // Other existing local-only features are preserved.
   useEffect(() => {
     let cancelled = false;
+
+    async function loadBrands() {
+      try {
+        const response = await fetch("/api/admin/brands");
+
+        if (!response.ok) {
+          throw new Error("Failed to load brands.");
+        }
+
+        const data: BrandInfo[] = await response.json();
+
+        if (!cancelled) {
+          setBrands(data);
+        }
+      } catch (error) {
+        console.error("Could not load brands:", error);
+      }
+    }
 
     async function loadColors() {
       try {
@@ -179,10 +205,12 @@ export function StoreProvider({
       }
     }
 
+    void loadBrands();
     void loadColors();
 
     try {
       const savedCart = localStorage.getItem("colorhub_cart");
+
       if (savedCart) {
         setCart(JSON.parse(savedCart));
       }
@@ -216,7 +244,6 @@ export function StoreProvider({
     };
   }, []);
 
-  // Save cart to local storage
   const saveCart = (newCart: CartItem[]) => {
     setCart(newCart);
 
@@ -230,7 +257,6 @@ export function StoreProvider({
     }
   };
 
-  // Save orders to local storage
   const saveOrders = (newOrders: Order[]) => {
     setOrders(newOrders);
 
@@ -244,7 +270,6 @@ export function StoreProvider({
     }
   };
 
-  // Save inquiries to local storage
   const saveInquiries = (
     newInquiries: ConsultationInquiry[]
   ) => {
@@ -271,7 +296,6 @@ export function StoreProvider({
     }, 3800);
   };
 
-  // Modal actions
   const openProductModal = (color: PaintColor) =>
     setModal({ type: "product", data: color });
 
@@ -290,7 +314,6 @@ export function StoreProvider({
 
   const closeModal = () => setModal({ type: null });
 
-  // Add colour through the backend API
   const addColor = async (
     newColorData: Omit<PaintColor, "id">
   ): Promise<boolean> => {
@@ -300,6 +323,7 @@ export function StoreProvider({
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "same-origin",
         body: JSON.stringify(newColorData),
       });
 
@@ -334,7 +358,6 @@ export function StoreProvider({
     }
   };
 
-  // Update colour through the backend API
   const updateColor = async (
     id: string,
     updates: Partial<PaintColor>
@@ -347,6 +370,7 @@ export function StoreProvider({
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "same-origin",
           body: JSON.stringify(updates),
         }
       );
@@ -388,7 +412,6 @@ export function StoreProvider({
     }
   };
 
-  // Delete colour through the backend API
   const deleteColor = async (
     id: string
   ): Promise<boolean> => {
@@ -397,6 +420,7 @@ export function StoreProvider({
         `/api/colors/${encodeURIComponent(id)}`,
         {
           method: "DELETE",
+          credentials: "same-origin",
         }
       );
 
@@ -438,7 +462,101 @@ export function StoreProvider({
     }
   };
 
-  // Cart actions
+  // Create a brand through the protected backend API.
+  const addBrand = async (
+    data: NewBrandData
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch("/api/admin/brands", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Unable to add brand."
+        );
+      }
+
+      setBrands((current) => {
+        const exists = current.some(
+          (brand) => brand.id === result.id
+        );
+
+        if (exists) return current;
+
+        return [...current, result as BrandInfo].sort(
+          (a, b) => a.name.localeCompare(b.name)
+        );
+      });
+
+      showToast(
+        `Added brand "${result.name}".`,
+        "success"
+      );
+
+      return true;
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to add brand.",
+        "error"
+      );
+
+      return false;
+    }
+  };
+
+  // Delete a brand through the protected backend API.
+  const deleteBrand = async (
+    id: string
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(
+        `/api/admin/brands/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Unable to delete brand."
+        );
+      }
+
+      setBrands((current) =>
+        current.filter((brand) => brand.id !== id)
+      );
+
+      showToast(
+        result.message || "Brand deleted successfully.",
+        "success"
+      );
+
+      return true;
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to delete brand.",
+        "error"
+      );
+
+      return false;
+    }
+  };
+
   const addToCart = (itemData: Omit<CartItem, "id">) => {
     const existingIndex = cart.findIndex(
       (item) =>
@@ -511,17 +629,14 @@ export function StoreProvider({
     0
   );
 
-  // Wishlist
   const toggleWishlist = (colorId: string) => {
     let next: string[];
 
     if (wishlist.includes(colorId)) {
       next = wishlist.filter((id) => id !== colorId);
-
       showToast("Removed from saved shades", "info");
     } else {
       next = [...wishlist, colorId];
-
       showToast("Saved to your favorites!", "success");
     }
 
@@ -540,7 +655,6 @@ export function StoreProvider({
   const isWishlisted = (colorId: string) =>
     wishlist.includes(colorId);
 
-  // Consultation actions
   const bookConsultation = (
     data: Omit<
       ConsultationInquiry,
@@ -562,7 +676,6 @@ export function StoreProvider({
     );
   };
 
-  // Order actions
   const placeOrder = (customer: {
     name: string;
     email: string;
@@ -638,6 +751,8 @@ export function StoreProvider({
         addColor,
         updateColor,
         deleteColor,
+        addBrand,
+        deleteBrand,
         addToCart,
         removeFromCart,
         updateCartQty,

@@ -1,21 +1,28 @@
-export type PaintCategory = 'Interior' | 'Exterior' | 'Wall' | 'Wood' | 'Metal' | 'Texture';
 
-export type PaintFinish = 'Matte' | 'Satin' | 'Gloss' | 'Texture' | 'Eggshell';
+export type PaintCategory = "emulsive" | "other";
 
-export type PaintBrand = 'Asian Paints' | 'Berger' | 'Dulux' | 'Nerolac' | 'JSW' | 'Indigo' | 'Other';
+export type PaintFinish =
+  | "Matte"
+  | "Satin"
+  | "Gloss"
+  | "Texture"
+  | "Eggshell";
+
+export type PaintBrand = string;
 
 export interface PaintColor {
   id: string;
   name: string;
   code: string;
   brand: PaintBrand;
+  brandId?: string;
   hex: string;
   category: PaintCategory;
   finish: PaintFinish;
   pricePer4L: number;
   description: string;
   roomImage: string;
-  wallMaskType?: 'living' | 'bedroom' | 'kitchen' | 'exterior';
+  wallMaskType?: "living" | "bedroom" | "kitchen" | "exterior";
   isPopular?: boolean;
   isNew?: boolean;
   isActive: boolean;
@@ -25,7 +32,7 @@ export interface PaintColor {
 
 export interface BrandInfo {
   id: string;
-  name: PaintBrand;
+  name: string;
   tagline: string;
   logoUrl: string;
   accentColor: string;
@@ -36,7 +43,13 @@ export interface BrandInfo {
 export interface InspirationItem {
   id: string;
   title: string;
-  roomType: 'Living Room' | 'Bedroom' | 'Kitchen' | 'Exterior' | 'Office' | 'Kids Room';
+  roomType:
+    | "Living Room"
+    | "Bedroom"
+    | "Kitchen"
+    | "Exterior"
+    | "Office"
+    | "Kids Room";
   palette: string[];
   paletteNames: string;
   imageUrl: string;
@@ -51,7 +64,7 @@ export interface CartItem {
   code: string;
   brand: PaintBrand;
   hex: string;
-  packSize: '1L' | '4L' | '10L' | '20L';
+  packSize: "1L" | "4L" | "10L" | "20L";
   quantity: number;
   price: number;
   roomImage: string;
@@ -65,7 +78,7 @@ export interface Order {
   address: string;
   items: CartItem[];
   totalAmount: number;
-  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered';
+  status: "Pending" | "Processing" | "Shipped" | "Delivered";
   createdAt: string;
 }
 
@@ -79,5 +92,5 @@ export interface ConsultationInquiry {
   preferredDate: string;
   notes: string;
   createdAt: string;
-  status: 'New' | 'Contacted' | 'Completed';
+  status: "New" | "Contacted" | "Completed";
 }

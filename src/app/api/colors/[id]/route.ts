@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { isAdminAuthenticated } from "@/lib/adminAuth";
 import PaintColor from "@/models/PaintColor";
+import Brand from "@/models/Brand";
 
 export const runtime = "nodejs";
 
@@ -10,10 +11,18 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-export async function PUT(
-  request: NextRequest,
-  context: RouteContext
-) {
+function serializeColor(color: any) {
+  const brand =
+    color?.brand && typeof color.brand === "object" ? color.brand : null;
+
+  return {
+    ...color,
+    brand: brand?.name ?? "",
+    brandId: brand?._id ? String(brand._id) : "",
+  };
+}
+
+export async function PUT(request: NextRequest, context: RouteContext) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json(
       { message: "Admin login required." },
@@ -28,7 +37,6 @@ export async function PUT(
     const allowedFields = [
       "name",
       "code",
-      "brand",
       "hex",
       "category",
       "finish",
@@ -49,7 +57,31 @@ export async function PUT(
       }
     }
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.prototype.hasOwnProperty.call(body, "brand")) {
+      if (typeof body.brand !== "string" || !body.brand.trim()) {
+        return NextResponse.json(
+          { message: "Select a valid brand." },
+          { status: 400 }
+        );
+      }
+
+      await connectDB();
+
+      const brand = await Brand.findOne({
+        normalizedName: body.brand.trim().toLocaleLowerCase("en"),
+      }).lean();
+
+      if (!brand) {
+        return NextResponse.json(
+          { message: "Select a valid brand." },
+          { status: 400 }
+        );
+      }
+
+      updates.brand = brand._id;
+    }
+
+    if (!Object.keys(updates).length) {
       return NextResponse.json(
         { message: "No valid fields were supplied." },
         { status: 400 }
@@ -77,12 +109,22 @@ export async function PUT(
       );
     }
 
+    if (
+      updates.category !== undefined &&
+      !["emulsive", "other"].includes(String(updates.category))
+    ) {
+      return NextResponse.json(
+        { message: "Invalid category." },
+        { status: 400 }
+      );
+    }
+
     if (updates.pricePer4L !== undefined) {
       const price = Number(updates.pricePer4L);
 
       if (
         updates.pricePer4L === "" ||
-        updates.pricePer4L === null ||
+        updates.pricePer4L == null ||
         !Number.isFinite(price) ||
         price < 0
       ) {
@@ -101,7 +143,9 @@ export async function PUT(
       { id },
       { $set: updates },
       { new: true, runValidators: true }
-    ).lean();
+    )
+      .populate("brand", "name")
+      .lean();
 
     if (!updated) {
       return NextResponse.json(
@@ -110,7 +154,7 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json(updated);
+    return NextResponse.json(serializeColor(updated));
   } catch (error) {
     console.error("Failed to update colour:", error);
 

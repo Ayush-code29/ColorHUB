@@ -22,17 +22,10 @@ const PaintColorSchema = new Schema(
       maxlength: 50,
     },
     brand: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "Brand",
       required: true,
-      enum: [
-        "Asian Paints",
-        "Berger",
-        "Dulux",
-        "Nerolac",
-        "JSW",
-        "Indigo",
-        "Other",
-      ],
+      index: true,
     },
     hex: {
       type: String,
@@ -42,14 +35,8 @@ const PaintColorSchema = new Schema(
     category: {
       type: String,
       required: true,
-      enum: [
-        "Interior",
-        "Exterior",
-        "Wall",
-        "Wood",
-        "Metal",
-        "Texture",
-      ],
+      enum: ["emulsion", "enamel","distemper","acrylic","cement"],
+      default: "emulsive",
     },
     finish: {
       type: String,
@@ -102,6 +89,7 @@ const PaintColorSchema = new Schema(
   {
     timestamps: true,
     versionKey: false,
+    suppressReservedKeysWarning: true,
   }
 );
 

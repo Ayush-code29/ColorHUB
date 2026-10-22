@@ -1,344 +1,659 @@
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '@/context/StoreContext';
-import { PaintColor, PaintBrand, PaintCategory, PaintFinish } from '@/types';
-import { X, ArrowLeft, Upload, Check, Eye } from 'lucide-react';
+import { PaintColor, PaintFinish } from '@/types';
+import { X, ArrowLeft } from 'lucide-react';
 
 interface Props {
   colorToEdit?: PaintColor;
 }
 
-export default function AdminAddColorModal({ colorToEdit }: Props) {
-  const { closeModal, addColor, updateColor } = useStore();
+const DEFAULT_ROOM_IMAGE =
+  'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80';
+
+const PRESET_IMAGES = [
+  {
+    label: 'Living Room',
+    url: DEFAULT_ROOM_IMAGE,
+  },
+  {
+    label: 'Bedroom',
+    url: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    label: 'Kitchen',
+    url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    label: 'Warm Lounge',
+    url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80',
+  },
+];
+
+const PAINT_CATEGORIES = [
+  'Emulsion',
+  'Enamel',
+  'Primer',
+  'Putty',
+  'Waterproofing',
+  'Texture',
+  'Wood & Metal',
+  'Other',
+];
+
+type BrandOption = {
+  id: string;
+  name: string;
+  tagline?: string;
+};
+
+export default function AdminAddColorModal({
+  colorToEdit,
+}: Props) {
+  const {
+    closeModal,
+    addColor,
+    updateColor,
+    brands,
+    showToast,
+  } = useStore();
+
+  const availableBrands = brands as BrandOption[];
+
+  const existingBrandId = (() => {
+    const color = colorToEdit as any;
+
+    if (!color) return '';
+
+    if (color.brandId) {
+      return String(
+        typeof color.brandId === 'object'
+          ? color.brandId._id ?? color.brandId.id ?? ''
+          : color.brandId
+      );
+    }
+
+    if (color.brand && typeof color.brand === 'object') {
+      return String(color.brand._id ?? color.brand.id ?? '');
+    }
+
+    return '';
+  })();
 
   const [formData, setFormData] = useState({
-    name: colorToEdit?.name || '',
-    brand: (colorToEdit?.brand || 'Asian Paints') as PaintBrand,
-    code: colorToEdit?.code || 'AP-105',
-    category: (colorToEdit?.category || 'Interior') as PaintCategory,
-    finish: (colorToEdit?.finish || 'Matte') as PaintFinish,
-    hex: colorToEdit?.hex || '#EAE3D2',
-    pricePer4L: colorToEdit?.pricePer4L || 1250,
-    roomImage:
-      colorToEdit?.roomImage ||
-      'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80',
+    name: colorToEdit?.name ?? '',
+    brand: existingBrandId,
+    code: colorToEdit?.code ?? '',
+    category: String(colorToEdit?.category ?? 'Emulsion'),
+    finish: (colorToEdit?.finish ?? 'Matte') as PaintFinish,
+    hex: colorToEdit?.hex ?? '#EAE3D2',
+    pricePer4L: colorToEdit?.pricePer4L ?? 1250,
+    roomImage: colorToEdit?.roomImage ?? DEFAULT_ROOM_IMAGE,
     description:
-      colorToEdit?.description ||
+      colorToEdit?.description ??
       'A soft and elegant shade that brings warmth and brightness to your space.',
     isActive: colorToEdit?.isActive ?? true,
-    wallMaskType: (colorToEdit?.wallMaskType || 'living') as any,
+    wallMaskType: String(
+      (colorToEdit as any)?.wallMaskType ?? 'living'
+    ),
   });
 
-  const presetImages = [
-    {
-      label: 'Living Room',
-      url: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      label: 'Bedroom',
-      url: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      label: 'Kitchen',
-      url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80',
-    },
-    {
-      label: 'Warm Lounge',
-      url: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80',
-    },
-  ];
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) return;
+  useEffect(() => {
+    if (availableBrands.length === 0) return;
 
-    if (colorToEdit) {
-      updateColor(colorToEdit.id, formData);
-    } else {
-      addColor(formData);
-    }
-    closeModal();
+    setFormData((current) => {
+      if (
+        current.brand &&
+        availableBrands.some(
+          (brand) => String(brand.id) === current.brand
+        )
+      ) {
+        return current;
+      }
+
+      const preferredBrand =
+        availableBrands.find(
+          (brand) => brand.name === 'Asian Paints'
+        ) ??
+        availableBrands.find(
+          (brand) => brand.name === 'Birla Opus'
+        ) ??
+        availableBrands[0];
+
+      return {
+        ...current,
+        brand: String(preferredBrand.id),
+      };
+    });
+  }, [brands]);
+
+  const selectedBrand = availableBrands.find(
+    (brand) => String(brand.id) === String(formData.brand)
+  );
+
+  const updateField = <K extends keyof typeof formData>(
+    field: K,
+    value: (typeof formData)[K]
+  ) => {
+    setFormData((current) => ({
+      ...current,
+      [field]: value,
+    }));
   };
+
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    if (saving) return;
+
+    const name = formData.name.trim();
+    const code = formData.code.trim();
+    const description = formData.description.trim();
+
+    if (!name || !code || !description) {
+      showToast(
+        'Please complete all required fields.',
+        'error'
+      );
+      return;
+    }
+
+    if (!formData.brand || !selectedBrand) {
+      showToast(
+        'Please select a valid brand.',
+        'error'
+      );
+      return;
+    }
+
+    if (!/^#[0-9A-Fa-f]{6}$/.test(formData.hex)) {
+      showToast(
+        'Please enter a valid HEX colour, such as #EAE3D2.',
+        'error'
+      );
+      return;
+    }
+
+    if (
+      !Number.isFinite(formData.pricePer4L) ||
+      formData.pricePer4L <= 0
+    ) {
+      showToast(
+        'Please enter a valid price.',
+        'error'
+      );
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const payload = {
+        name,
+        // The backend should store this as a Brand reference.
+        brand: formData.brand,
+        category: formData.category,
+        code,
+        finish: formData.finish,
+        hex: formData.hex.toUpperCase(),
+        pricePer4L: Number(formData.pricePer4L),
+        roomImage: formData.roomImage.trim(),
+        description,
+        isActive: formData.isActive,
+        wallMaskType: formData.wallMaskType,
+      };
+
+      const success = colorToEdit
+        ? await updateColor(
+            colorToEdit.id,
+            payload as unknown as Partial<PaintColor>
+          )
+        : await addColor(
+            payload as unknown as Omit<PaintColor, 'id'>
+          );
+
+      if (success) {
+        closeModal();
+      }
+    } catch (error) {
+      console.error('Failed to save paint colour:', error);
+
+      showToast(
+        'Unable to save the colour. Please try again.',
+        'error'
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputClass =
+    'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-medium outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20';
+
+  const labelClass =
+    'mb-1 block text-xs font-semibold text-slate-700';
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+      <button
+        type="button"
+        aria-label="Close colour form"
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
         onClick={closeModal}
       />
 
-      <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
-        <div className="relative w-full max-w-4xl transform overflow-hidden rounded-3xl bg-white text-left align-middle shadow-2xl transition-all border border-slate-100 p-6 sm:p-8">
-          {/* Header */}
-          <div className="flex items-center justify-between pb-5 border-b border-slate-100 mb-6">
+      <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
+        <div className="relative my-4 w-full max-w-4xl rounded-3xl border border-slate-100 bg-white p-6 text-left shadow-2xl sm:p-8">
+          <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-5">
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={closeModal}
-                className="p-1.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
+                aria-label="Go back"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-800"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="h-5 w-5" />
               </button>
+
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
-                  {colorToEdit ? 'Edit Colour' : 'Add / Edit Colour'}
+                  {colorToEdit ? 'Edit Colour' : 'Add New Colour'}
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Manage shade information, pricing, palette swatches, and room photography.
+                <p className="mt-1 text-xs text-slate-500">
+                  Manage brand, paint category, pricing and room photography.
                 </p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={closeModal}
-              className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+              aria-label="Close"
+              className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Body Form & Preview Columns */}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Form Fields (2 columns) */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 gap-8 lg:grid-cols-3"
+          >
+            <div className="space-y-4 lg:col-span-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Colour Name</label>
+                  <label className={labelClass} htmlFor="colour-name">
+                    Colour Name *
+                  </label>
                   <input
+                    id="colour-name"
                     type="text"
                     required
+                    maxLength={100}
                     placeholder="e.g. Ivory Mist"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    onChange={(event) =>
+                      updateField('name', event.target.value)
+                    }
+                    className={inputClass}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Brand</label>
+                  <label className={labelClass} htmlFor="colour-brand">
+                    Brand *
+                  </label>
                   <select
+                    id="colour-brand"
+                    required
                     value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value as PaintBrand })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    onChange={(event) =>
+                      updateField('brand', event.target.value)
+                    }
+                    className={inputClass}
+                    disabled={availableBrands.length === 0}
                   >
-                    <option>Asian Paints</option>
-                    <option>Berger</option>
-                    <option>Dulux</option>
-                    <option>Nerolac</option>
-                    <option>JSW</option>
-                    <option>Indigo</option>
-                    <option>Other</option>
+                    <option value="">Select a brand</option>
+                    {availableBrands.map((brand) => (
+                      <option
+                        key={brand.id}
+                        value={String(brand.id)}
+                      >
+                        {brand.name}
+                      </option>
+                    ))}
                   </select>
+
+                  {availableBrands.length === 0 && (
+                    <p className="mt-1 text-[11px] text-rose-600">
+                      No brands found. Check the Brand Management page.
+                    </p>
+                  )}
+
+                  {selectedBrand?.tagline && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {selectedBrand.tagline}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Colour Code</label>
+                  <label className={labelClass} htmlFor="colour-code">
+                    Colour Code *
+                  </label>
                   <input
+                    id="colour-code"
                     type="text"
                     required
+                    maxLength={50}
                     placeholder="e.g. AP-101"
                     value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    onChange={(event) =>
+                      updateField('code', event.target.value)
+                    }
+                    className={`${inputClass} font-mono`}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+                  <label className={labelClass} htmlFor="colour-category">
+                    Category *
+                  </label>
                   <select
+                    id="colour-category"
+                    required
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as PaintCategory })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    onChange={(event) =>
+                      updateField('category', event.target.value)
+                    }
+                    className={inputClass}
                   >
-                    <option>Interior</option>
-                    <option>Exterior</option>
-                    <option>Wall</option>
-                    <option>Wood</option>
-                    <option>Metal</option>
-                    <option>Texture</option>
+                    {PAINT_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Finish</label>
+                  <label className={labelClass} htmlFor="colour-finish">
+                    Finish *
+                  </label>
                   <select
+                    id="colour-finish"
+                    required
                     value={formData.finish}
-                    onChange={(e) => setFormData({ ...formData, finish: e.target.value as PaintFinish })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    onChange={(event) =>
+                      updateField(
+                        'finish',
+                        event.target.value as PaintFinish
+                      )
+                    }
+                    className={inputClass}
                   >
-                    <option>Matte</option>
-                    <option>Satin</option>
-                    <option>Gloss</option>
-                    <option>Texture</option>
-                    <option>Eggshell</option>
+                    <option value="Matte">Matte</option>
+                    <option value="Satin">Satin</option>
+                    <option value="Gloss">Gloss</option>
+                    <option value="Texture">Texture</option>
+                    <option value="Eggshell">Eggshell</option>
                   </select>
                 </div>
               </div>
 
-              {/* Price & Colour Swatch */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Price (₹ per 4 Liters)</label>
+                  <label className={labelClass} htmlFor="colour-price">
+                    Price per 4 Litres (₹) *
+                  </label>
                   <input
+                    id="colour-price"
                     type="number"
                     required
-                    min={200}
+                    min={1}
+                    step="0.01"
                     value={formData.pricePer4L}
-                    onChange={(e) => setFormData({ ...formData, pricePer4L: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                    onChange={(event) =>
+                      updateField(
+                        'pricePer4L',
+                        Number(event.target.value)
+                      )
+                    }
+                    className={inputClass}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Colour Preview & Hex</label>
+                  <label className={labelClass} htmlFor="colour-hex">
+                    Colour Preview & HEX *
+                  </label>
                   <div className="flex items-center gap-2">
                     <input
+                      aria-label="Choose colour"
                       type="color"
                       value={formData.hex}
-                      onChange={(e) => setFormData({ ...formData, hex: e.target.value.toUpperCase() })}
-                      className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0.5 bg-white"
+                      onChange={(event) =>
+                        updateField(
+                          'hex',
+                          event.target.value.toUpperCase()
+                        )
+                      }
+                      className="h-10 w-10 cursor-pointer rounded-xl border border-slate-200 bg-white p-0.5"
                     />
                     <input
+                      id="colour-hex"
                       type="text"
                       required
+                      pattern="^#[0-9A-Fa-f]{6}$"
+                      maxLength={7}
                       placeholder="#F4EFE6"
                       value={formData.hex}
-                      onChange={(e) => setFormData({ ...formData, hex: e.target.value.toUpperCase() })}
-                      className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                      onChange={(event) =>
+                        updateField(
+                          'hex',
+                          event.target.value.toUpperCase()
+                        )
+                      }
+                      className={`${inputClass} font-mono font-semibold`}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Images selection */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                <label className={labelClass}>
                   Room Preview Photography
                 </label>
-                <div className="grid grid-cols-4 gap-2 mb-2">
-                  {presetImages.map((img, idx) => (
+
+                <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {PRESET_IMAGES.map((image) => (
                     <button
-                      key={idx}
+                      key={image.label}
                       type="button"
-                      onClick={() => setFormData({ ...formData, roomImage: img.url })}
-                      className={`relative rounded-xl overflow-hidden border-2 h-16 transition-all ${
-                        formData.roomImage === img.url
+                      onClick={() =>
+                        updateField('roomImage', image.url)
+                      }
+                      aria-pressed={formData.roomImage === image.url}
+                      className={`relative h-16 overflow-hidden rounded-xl border-2 transition ${
+                        formData.roomImage === image.url
                           ? 'border-amber-500 ring-2 ring-amber-500/20'
-                          : 'border-transparent opacity-70 hover:opacity-100'
+                          : 'border-transparent opacity-75 hover:opacity-100'
                       }`}
                     >
-                      <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                      <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] py-0.5 text-center font-medium">
-                        {img.label}
+                      <img
+                        src={image.url}
+                        alt={image.label}
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute inset-x-0 bottom-0 bg-black/60 py-0.5 text-center text-[9px] font-medium text-white">
+                        {image.label}
                       </span>
                     </button>
                   ))}
                 </div>
+
                 <input
                   type="url"
-                  placeholder="Or enter custom image URL (Unsplash, etc.)"
+                  aria-label="Custom room image URL"
+                  placeholder="Or enter a custom image URL"
                   value={formData.roomImage}
-                  onChange={(e) => setFormData({ ...formData, roomImage: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  onChange={(event) =>
+                    updateField('roomImage', event.target.value)
+                  }
+                  className={inputClass}
                 />
               </div>
 
-              {/* Description */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
+                <label className={labelClass} htmlFor="colour-description">
+                  Description *
+                </label>
                 <textarea
-                  rows={2}
+                  id="colour-description"
+                  rows={3}
                   required
-                  placeholder="Detailed aesthetic description of the shade..."
+                  maxLength={1000}
+                  placeholder="Describe the shade and its aesthetic..."
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  onChange={(event) =>
+                    updateField('description', event.target.value)
+                  }
+                  className={inputClass}
                 />
               </div>
 
-              {/* Active Toggle Switch */}
-              <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center justify-between border-t border-slate-100 pt-4">
                 <div>
-                  <span className="text-xs font-semibold text-slate-800">Catalogue Status</span>
-                  <p className="text-[11px] text-slate-400">Available to customers in online store</p>
+                  <span className="text-xs font-semibold text-slate-800">
+                    Catalogue Status
+                  </span>
+                  <p className="text-[11px] text-slate-400">
+                    Make this colour available to customers
+                  </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+
+                <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="sr-only peer"
+                    onChange={(event) =>
+                      updateField('isActive', event.target.checked)
+                    }
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                  <span className="h-6 w-11 rounded-full bg-slate-200 transition after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-amber-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-500/30" />
                 </label>
               </div>
             </div>
 
-            {/* Live Preview Column (matching bottom-right mockup) */}
-            <div className="border border-slate-100 bg-slate-50/80 rounded-2xl p-5 flex flex-col justify-between">
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-5">
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="mb-3 flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Live Preview
                   </span>
-                  <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                      formData.isActive
+                        ? 'border-emerald-100 bg-emerald-50 text-emerald-600'
+                        : 'border-slate-200 bg-slate-100 text-slate-500'
+                    }`}
+                  >
                     {formData.isActive ? 'Active' : 'Draft'}
                   </span>
                 </div>
 
-                {/* Preview Card */}
-                <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-                  {/* Photo with subtle overlay simulation */}
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                   <div className="relative h-44 w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={formData.roomImage}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                    {formData.roomImage ? (
+                      <img
+                        src={formData.roomImage}
+                        alt={`${formData.name || 'Colour'} room preview`}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                        No room image
+                      </div>
+                    )}
+
                     <div
-                      className="absolute inset-0 mix-blend-multiply opacity-30 pointer-events-none"
+                      className="pointer-events-none absolute inset-0 mix-blend-multiply opacity-30"
                       style={{ backgroundColor: formData.hex }}
                     />
                   </div>
 
                   <div className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-base font-bold text-slate-900">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-base font-bold text-slate-900">
                           {formData.name || 'Untitled Shade'}
                         </h4>
-                        <p className="text-xs text-amber-600 font-semibold">{formData.brand}</p>
+                        <p className="mt-1 truncate text-xs font-semibold text-amber-600">
+                          {selectedBrand?.name || 'Select a brand'}
+                        </p>
+                        {selectedBrand?.tagline && (
+                          <p className="mt-1 line-clamp-2 text-[10px] text-slate-500">
+                            {selectedBrand.tagline}
+                          </p>
+                        )}
                       </div>
+
                       <div
-                        className="w-8 h-8 rounded-xl border border-black/10 shadow-xs"
+                        className="h-8 w-8 shrink-0 rounded-xl border border-black/10 shadow-sm"
                         style={{ backgroundColor: formData.hex }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-xs mt-3 pt-3 border-t border-slate-100">
-                      <span className="font-mono text-slate-500">{formData.code}</span>
-                      <span className="font-bold text-slate-900">₹{formData.pricePer4L.toLocaleString('en-IN')} (4L)</span>
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs">
+                      <span className="truncate font-mono text-slate-500">
+                        {formData.code || 'No code'}
+                      </span>
+                      <span className="shrink-0 font-bold text-slate-900">
+                        ₹{formData.pricePer4L.toLocaleString('en-IN')} / 4L
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600">
+                        {formData.category}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600">
+                        {formData.finish}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-2 pt-6">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                  disabled={saving}
+                  className="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-slate-950/10"
+                  disabled={saving || availableBrands.length === 0}
+                  className="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-slate-950/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Save Shade
+                  {saving
+                    ? 'Saving...'
+                    : colorToEdit
+                      ? 'Update Colour'
+                      : 'Save Colour'}
                 </button>
               </div>
             </div>

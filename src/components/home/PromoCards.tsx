@@ -1,124 +1,226 @@
-'use client';
 
-import React from 'react';
-import { ArrowRight, Sparkles, Percent, Calendar } from 'lucide-react';
-import { useStore } from '@/context/StoreContext';
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  LoaderCircle,
+} from "lucide-react";
+import { useStore } from "@/context/StoreContext";
+
+type Offer = {
+  id: string;
+  label: string;
+  heading: string;
+  description: string;
+  imageUrl: string;
+  buttonText: string;
+  buttonLink: string;
+  order: number;
+};
 
 export default function PromoCards() {
   const { openConsultationModal } = useStore();
 
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOffers() {
+      try {
+        const response = await fetch("/api/offers", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to load offers");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setOffers(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error(
+          "Unable to load homepage offers:",
+          error
+        );
+
+        if (!cancelled) {
+          setOffers([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadOffers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeIndex >= offers.length) {
+      setActiveIndex(Math.max(0, offers.length - 1));
+    }
+  }, [activeIndex, offers.length]);
+
+  if (loading) {
+    return (
+      <section
+        id="offers-section"
+        className="bg-white py-8"
+      >
+        <div className="mx-auto flex max-w-7xl justify-center px-4 py-12 text-sm text-slate-400">
+          <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+          Loading offers...
+        </div>
+      </section>
+    );
+  }
+
+  if (offers.length === 0) {
+    return null;
+  }
+
+  const previous = () => {
+    setActiveIndex(
+      (index) => (index - 1 + offers.length) % offers.length
+    );
+  };
+
+  const next = () => {
+    setActiveIndex(
+      (index) => (index + 1) % offers.length
+    );
+  };
+
+  function handleOfferClick(link: string) {
+    if (/^(https?:\/\/|mailto:|tel:)/i.test(link)) {
+      window.location.href = link;
+      return;
+    }
+
+    if (
+      link === "#consultation" ||
+      link === "/consultation"
+    ) {
+      openConsultationModal();
+      return;
+    }
+
+    if (link.startsWith("#")) {
+      document
+        .querySelector(link)
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
+      return;
+    }
+
+    if (link.startsWith("/")) {
+      window.location.href = link;
+    }
+  }
+
+  const visibleOffers = Array.from(
+    { length: Math.min(3, offers.length) },
+    (_, offset) => offers[(activeIndex + offset) % offers.length]
+  );
+
   return (
-    <section id="offers-section" className="py-8 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Card 1: Festive Offer */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 border border-rose-100 p-6 flex flex-col justify-between group hover:shadow-xl hover:shadow-orange-950/5 transition-all">
-            <div className="relative z-10">
-              <span className="inline-block text-xs font-bold uppercase tracking-wider text-rose-600 mb-1">
-                Festive Offer
+    <section
+      id="offers-section"
+      className="bg-white py-8"
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+            Offers &amp; Inspiration
+          </p>
+
+          {offers.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="mr-1 text-xs tabular-nums text-slate-400">
+                {activeIndex + 1} / {offers.length}
               </span>
-              <h3 className="text-xl font-extrabold text-slate-900 leading-snug">
-                Up to 30% OFF on selected products
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Royale &amp; Silk luxury series festive savings
-              </p>
-            </div>
 
-            <div className="mt-8 flex items-end justify-between relative z-10">
-              <a
-                href="#colours-section"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors"
-              >
-                <span>Shop Now</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </a>
-
-              {/* Paint can realistic graphic */}
-              <div className="relative w-28 h-24 flex items-center justify-center">
-                <div className="w-16 h-20 rounded-xl bg-gradient-to-b from-amber-600 via-rose-700 to-amber-900 shadow-md border-t-4 border-amber-300 relative flex flex-col justify-between p-1.5 text-center">
-                  <div className="h-1.5 w-full bg-white/30 rounded-full" />
-                  <span className="text-[9px] font-black tracking-widest text-amber-100 uppercase">
-                    Royale
-                  </span>
-                  <div className="h-1 w-full bg-amber-400/40 rounded-full" />
-                </div>
-                <div className="w-14 h-18 -ml-3 rounded-xl bg-gradient-to-b from-red-600 via-rose-600 to-red-800 shadow-lg border-t-4 border-white/50 relative flex flex-col justify-between p-1 text-center">
-                  <span className="text-[8px] font-black text-white uppercase">Apcolite</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Free Home Colour Consultation */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 border border-emerald-100 p-6 flex flex-col justify-between group hover:shadow-xl hover:shadow-emerald-950/5 transition-all">
-            <div className="relative z-10">
-              <span className="inline-block text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1">
-                Expert Guidance
-              </span>
-              <h3 className="text-xl font-extrabold text-slate-900 leading-snug">
-                Free Home Colour Consultation
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Get expert suggestions for your space
-              </p>
-            </div>
-
-            <div className="mt-8 flex items-end justify-between relative z-10">
               <button
-                onClick={openConsultationModal}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors"
+                type="button"
+                onClick={previous}
+                aria-label="Previous offer"
+                className="rounded-full border border-slate-200 p-2 text-slate-700 transition hover:bg-slate-50"
               >
-                <span>Book Now</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                <ArrowLeft className="h-4 w-4" />
               </button>
 
-              {/* Realistic interior armchair image */}
-              <div className="relative w-28 h-24 rounded-2xl overflow-hidden shadow-sm border border-emerald-200/50">
+              <button
+                type="button"
+                onClick={next}
+                aria-label="Next offer"
+                className="rounded-full border border-slate-200 p-2 text-slate-700 transition hover:bg-slate-50"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {visibleOffers.map((offer, visibleIndex) => (
+            <article
+              key={offer.id}
+              className="group relative flex min-h-[250px] flex-col justify-between overflow-hidden rounded-[28px] border border-amber-100 bg-gradient-to-br from-amber-50 via-orange-50 to-stone-50 p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <div className="relative z-10 pr-1">
+                <span className="mb-2 inline-block text-[11px] font-extrabold uppercase tracking-wider text-amber-700">
+                  {offer.label}
+                </span>
+
+                <h2 className="max-w-[95%] text-xl font-extrabold leading-snug text-slate-950">
+                  {offer.heading}
+                </h2>
+
+                <p className="mt-2 max-w-[95%] text-sm leading-5 text-slate-600">
+                  {offer.description}
+                </p>
+              </div>
+
+              <div className="relative z-10 mt-6 flex items-end justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOfferClick(offer.buttonLink)
+                  }
+                  className="inline-flex max-w-[55%] items-center gap-2 text-left text-sm font-bold text-slate-950 transition hover:text-amber-700"
+                >
+                  <span>{offer.buttonText}</span>
+
+                  <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" />
+                </button>
+
                 <img
-                  src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=300&q=80"
-                  alt="Interior consultation decor"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  src={offer.imageUrl}
+                  alt={offer.heading}
+                  loading={
+                    visibleIndex === 0 ? "eager" : "lazy"
+                  }
+                  className="h-24 w-28 shrink-0 rounded-2xl border border-white/80 object-cover shadow-sm"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Card 3: New Arrivals */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-50 via-stone-50 to-orange-50 border border-amber-100 p-6 flex flex-col justify-between group hover:shadow-xl hover:shadow-amber-950/5 transition-all">
-            <div className="relative z-10">
-              <span className="inline-block text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">
-                Curated 2026 Trends
-              </span>
-              <h3 className="text-xl font-extrabold text-slate-900 leading-snug">
-                New Arrivals &amp; Velvet Sheens
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Explore the latest shades and finishes
-              </p>
-            </div>
-
-            <div className="mt-8 flex items-end justify-between relative z-10">
-              <a
-                href="#colours-section"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors"
-              >
-                <span>View Collection</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </a>
-
-              {/* Paint can realistic graphic */}
-              <div className="relative w-28 h-24 flex items-center justify-center">
-                <div className="w-16 h-20 rounded-xl bg-gradient-to-b from-blue-700 via-sky-800 to-indigo-900 shadow-md border-t-4 border-sky-300 relative flex flex-col justify-between p-1.5 text-center">
-                  <div className="h-1.5 w-full bg-white/30 rounded-full" />
-                  <span className="text-[9px] font-black tracking-widest text-sky-100 uppercase">
-                    Dulux
-                  </span>
-                  <div className="h-1 w-full bg-sky-400/40 rounded-full" />
-                </div>
-              </div>
-            </div>
-          </div>
+            </article>
+          ))}
         </div>
       </div>
     </section>

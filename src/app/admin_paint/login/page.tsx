@@ -1,7 +1,8 @@
 
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LockKeyhole, Palette } from "lucide-react";
 
@@ -16,6 +17,8 @@ export default function AdminLoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (loading) return;
+
     setError("");
     setLoading(true);
 
@@ -26,17 +29,22 @@ export default function AdminLoginPage() {
           "Content-Type": "application/json",
         },
         credentials: "same-origin",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(data.message || "Login failed.");
+        setError(
+          data.message || "Login failed. Please check your credentials."
+        );
         return;
       }
 
-      router.replace("/admin");
+      router.replace("/admin_paint");
       router.refresh();
     } catch {
       setError("Server connection failed. Please try again.");
@@ -46,7 +54,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 flex items-center justify-center px-4 py-10">
+    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10">
       <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white">
