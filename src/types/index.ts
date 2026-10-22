@@ -1,6 +1,11 @@
 
-export type PaintCategory = "emulsive" | "other";
-
+export type PaintCategory =
+  | "emulsion"
+  | "enamel"
+  | "distemper"
+  | "acrylic"
+  | "cement";
+  
 export type PaintFinish =
   | "Matte"
   | "Satin"

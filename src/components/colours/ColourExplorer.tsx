@@ -10,14 +10,13 @@ interface Props {
   onSelectBrand: (brand: PaintBrand | 'All') => void;
 }
 
-const CATEGORIES: ('All' | PaintCategory)[] = [
-  'All',
-  'Interior',
-  'Exterior',
-  'Wall',
-  'Wood',
-  'Metal',
-  'Texture',
+const categories: Array<PaintCategory | "All"> = [
+  "All",
+  "emulsion",
+  "enamel",
+  "distemper",
+  "acrylic",
+  "cement",
 ];
 
 const BRANDS_LIST: PaintBrand[] = [
@@ -115,7 +114,7 @@ export default function ColourExplorer({ selectedBrand, onSelectBrand }: Props) 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
           {/* Category Chips */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}

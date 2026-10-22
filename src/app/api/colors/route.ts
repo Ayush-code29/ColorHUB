@@ -1,4 +1,3 @@
-
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
@@ -10,6 +9,65 @@ import { ensureDefaultBrands } from "@/lib/brandHelpers";
 
 export const runtime = "nodejs";
 
+const PAINT_CATEGORIES = [
+  "emulsion",
+  "enamel",
+  "distemper",
+  "acrylic",
+  "cement",
+] as const;
+
+type PaintCategory = (typeof PAINT_CATEGORIES)[number];
+
+const PAINT_FINISHES = [
+  "Matte",
+  "Satin",
+  "Gloss",
+  "Texture",
+  "Eggshell",
+] as const;
+
+function normalizeCategory(value: unknown): PaintCategory {
+  if (
+    typeof value === "string" &&
+    PAINT_CATEGORIES.includes(value as PaintCategory)
+  ) {
+    return value as PaintCategory;
+  }
+
+  if (typeof value !== "string") {
+    return "acrylic";
+  }
+
+  switch (value.toLowerCase().trim()) {
+    case "interior":
+    case "wall":
+    case "emulsive":
+    case "other":
+    case "emulsion":
+      return "emulsion";
+
+    case "exterior":
+    case "cement":
+      return "cement";
+
+    case "wood":
+    case "metal":
+    case "enamel":
+      return "enamel";
+
+    case "texture":
+    case "acrylic":
+      return "acrylic";
+
+    case "distemper":
+      return "distemper";
+
+    default:
+      return "acrylic";
+  }
+}
+
 async function migrateLegacyColors() {
   const asian = await Brand.findOne({
     normalizedName: "asian paints",
@@ -19,29 +77,36 @@ async function migrateLegacyColors() {
     normalizedName: "birla opus",
   }).lean();
 
-  if (!asian || !birla) return;
-
   const legacyColors = await PaintColor.find({
     $or: [
       { brand: { $type: "string" } },
-      { category: { $nin: ["emulsive", "other"] } },
+      { category: { $nin: PAINT_CATEGORIES } },
+      { category: { $exists: false } },
     ],
   }).lean();
 
   for (const color of legacyColors) {
-    const oldBrand = typeof color.brand === "string" ? color.brand : "";
+    const update: Record<string, unknown> = {
+      category: normalizeCategory(color.category),
+    };
 
-    const brandId =
-      oldBrand.toLowerCase() === "asian paints" ? asian._id : birla._id;
+    if (typeof color.brand === "string") {
+      const oldBrand = color.brand.trim().toLowerCase();
+
+      if (oldBrand === "asian paints" && asian) {
+        update.brand = asian._id;
+      } else if (oldBrand === "birla opus" && birla) {
+        update.brand = birla._id;
+      } else {
+        // Preserve unknown legacy brand names by not replacing them
+        // with an unrelated brand.
+        continue;
+      }
+    }
 
     await PaintColor.updateOne(
       { _id: color._id },
-      {
-        $set: {
-          brand: brandId,
-          category: color.category === "other" ? "other" : "emulsive",
-        },
-      }
+      { $set: update }
     );
   }
 }
@@ -55,6 +120,7 @@ function serializeColor(color: any) {
     id: color.id,
     brand: brand?.name ?? (typeof color.brand === "string" ? color.brand : ""),
     brandId: brand?._id ? String(brand._id) : "",
+    category: normalizeCategory(color.category),
   };
 }
 
@@ -85,7 +151,7 @@ export async function GET() {
       ).map((color) => ({
         ...color,
         brand: brandByName.get("Asian Paints"),
-        category: color.category === "other" ? "other" : "emulsive",
+        category: normalizeCategory(color.category),
       }));
 
       if (seed.length) {
@@ -148,8 +214,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (
-      !["emulsive", "other"].includes(category) ||
-      !["Matte", "Satin", "Gloss", "Texture", "Eggshell"].includes(finish)
+      typeof category !== "string" ||
+      !PAINT_CATEGORIES.includes(category as PaintCategory) ||
+      typeof finish !== "string" ||
+      !PAINT_FINISHES.includes(
+        finish as (typeof PAINT_FINISHES)[number]
+      )
     ) {
       return NextResponse.json(
         { message: "Invalid category or finish." },
@@ -171,7 +241,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const id = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${randomUUID().slice(0, 8)}`;
+    const id = `${name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")}-${randomUUID().slice(0, 8)}`;
 
     const created = await PaintColor.create({
       id,
@@ -179,7 +251,7 @@ export async function POST(request: NextRequest) {
       code,
       brand: brand._id,
       hex,
-      category,
+      category: category as PaintCategory,
       finish,
       pricePer4L: price,
       description:
