@@ -25,7 +25,6 @@ export default function Navbar() {
     setIsCartOpen,
     openCalculatorModal,
     openProductModal,
-    openConsultationModal,
   } = useStore();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -255,18 +254,6 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={openConsultationModal}
-              className="hidden h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 text-[12px] font-semibold text-amber-900 transition-colors hover:border-amber-300 hover:bg-amber-100 xl:inline-flex"
-            >
-              <Sparkles
-                className="h-4 w-4 text-amber-700"
-                strokeWidth={1.8}
-              />
-              Free consultation
-            </button>
-
             <Link
               href="#colours-section"
               aria-label={`Saved shades${
@@ -384,15 +371,6 @@ export default function Navbar() {
               Offers
             </a>
           </nav>
-
-          <button
-            type="button"
-            onClick={openConsultationModal}
-            className="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-semibold text-slate-600 transition-colors hover:text-amber-800 xl:hidden"
-          >
-            <Sparkles className="h-4 w-4 text-amber-700" />
-            Free consultation
-          </button>
         </div>
       </div>
 
@@ -468,17 +446,14 @@ export default function Navbar() {
           </nav>
 
           <div className="mt-3 border-t border-slate-100 pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                closeMobileMenu();
-                openConsultationModal();
-              }}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-900 transition-colors hover:bg-amber-100"
+            <Link
+              href="/admin"
+              onClick={closeMobileMenu}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
             >
-              <Sparkles className="h-4 w-4" />
-              Free consultation
-            </button>
+              <LayoutDashboard className="h-4 w-4 text-amber-400" />
+              Admin Portal
+            </Link>
           </div>
         </div>
       )}
