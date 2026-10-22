@@ -131,7 +131,7 @@ export function StoreProvider({
     useState<PaintColor[]>(INITIAL_COLORS);
 
   const [brands, setBrands] =
-    useState<BrandInfo[]>(INITIAL_BRANDS);
+    useState<BrandInfo[]>([]);
 
   const [inspirations] =
     useState<InspirationItem[]>(INITIAL_INSPIRATIONS);
@@ -171,8 +171,11 @@ export function StoreProvider({
 
         const data: BrandInfo[] = await response.json();
 
-        if (!cancelled) {
+        if (!cancelled && Array.isArray(data)) {
           setBrands(data);
+          try {
+            localStorage.setItem("colorhub_brands", JSON.stringify(data));
+          } catch {}
         }
       } catch (error) {
         console.error("Could not load brands:", error);
@@ -209,6 +212,11 @@ export function StoreProvider({
     void loadColors();
 
     try {
+      const savedBrands = localStorage.getItem("colorhub_brands");
+      if (savedBrands) {
+        setBrands(JSON.parse(savedBrands));
+      }
+
       const savedCart = localStorage.getItem("colorhub_cart");
 
       if (savedCart) {
@@ -491,9 +499,15 @@ export function StoreProvider({
 
         if (exists) return current;
 
-        return [...current, result as BrandInfo].sort(
+        const updated = [...current, result as BrandInfo].sort(
           (a, b) => a.name.localeCompare(b.name)
         );
+
+        try {
+          localStorage.setItem("colorhub_brands", JSON.stringify(updated));
+        } catch {}
+
+        return updated;
       });
 
       showToast(
@@ -561,10 +575,14 @@ export function StoreProvider({
         deletedColors.map((color) => color.id)
       );
 
-      // Remove the brand from frontend state.
-      setBrands((current) =>
-        current.filter((brand) => brand.id !== id)
-      );
+      // Remove the brand from frontend state and sync localStorage.
+      setBrands((current) => {
+        const updated = current.filter((brand) => brand.id !== id);
+        try {
+          localStorage.setItem("colorhub_brands", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
 
       // Remove all its colours from frontend state.
       setColors((current) =>

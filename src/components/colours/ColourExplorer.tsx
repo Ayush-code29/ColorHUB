@@ -19,21 +19,12 @@ const categories: Array<PaintCategory | "All"> = [
   "cement",
 ];
 
-const BRANDS_LIST: PaintBrand[] = [
-  'Asian Paints',
-  'Berger',
-  'Nerolac',
-  'Dulux',
-  'JSW',
-  'Indigo',
-  'Other',
-];
-
 const FINISHES_LIST: PaintFinish[] = ['Matte', 'Satin', 'Gloss', 'Texture'];
 
 export default function ColourExplorer({ selectedBrand, onSelectBrand }: Props) {
   const {
     colors,
+    brands,
     openProductModal,
     setSelectedVisualizerColor,
     toggleWishlist,
@@ -168,19 +159,19 @@ export default function ColourExplorer({ selectedBrand, onSelectBrand }: Props) 
                   />
                   <span>All Brands</span>
                 </label>
-                {BRANDS_LIST.map((brand) => (
+                {brands.map((brand) => (
                   <label
-                    key={brand}
+                    key={brand.id || brand.name}
                     className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer"
                   >
                     <input
                       type="radio"
                       name="brandFilter"
-                      checked={selectedBrand === brand}
-                      onChange={() => onSelectBrand(brand)}
+                      checked={selectedBrand === brand.name}
+                      onChange={() => onSelectBrand(brand.name as any)}
                       className="text-amber-600 focus:ring-amber-500"
                     />
-                    <span>{brand}</span>
+                    <span>{brand.name}</span>
                   </label>
                 ))}
               </div>

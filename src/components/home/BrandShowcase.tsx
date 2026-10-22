@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useStore } from '@/context/StoreContext';
-import { ChevronRight, ShieldCheck, Award } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { PaintBrand } from '@/types';
 
 interface Props {
@@ -13,47 +13,13 @@ interface Props {
 export default function BrandShowcase({ selectedBrand, onSelectBrand }: Props) {
   const { brands } = useStore();
 
-  const brandLogos: Record<string, { logoText: string; color: string; bg: string; sub: string }> = {
-    'Asian Paints': {
-      logoText: 'ap asianpaints',
-      color: '#DC2626',
-      bg: 'bg-red-50 text-red-700',
-      sub: 'Royale & Apcolite',
-    },
-    'Berger': {
-      logoText: 'Berger',
-      color: '#1E3A8A',
-      bg: 'bg-blue-50 text-blue-800',
-      sub: 'Silk & Easy Clean',
-    },
-    'Dulux': {
-      logoText: "Dulux let's colour",
-      color: '#0284C7',
-      bg: 'bg-sky-50 text-sky-700',
-      sub: 'Velvet Touch Pearl',
-    },
-    'Nerolac': {
-      logoText: 'NEROLAC',
-      color: '#0D9488',
-      bg: 'bg-emerald-50 text-emerald-800',
-      sub: 'Beauty Gold & Impressions',
-    },
-    'JSW': {
-      logoText: 'JSW PAINTS',
-      color: '#EA580C',
-      bg: 'bg-orange-50 text-orange-800',
-      sub: 'Halo Luxury Emulsion',
-    },
-    'Indigo': {
-      logoText: 'INDIGO be surprised!',
-      color: '#7C3AED',
-      bg: 'bg-purple-50 text-purple-800',
-      sub: 'Metallic & Dirtproof',
-    },
-  };
+  // If no brands are added from the admin panel yet, do not render the section
+  if (!brands || brands.length === 0) {
+    return null;
+  }
 
   return (
-    <section id="brands-section" className="py-12 bg-white">
+    <section id="brands-section" className="py-12 bg-white border-b border-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
@@ -61,7 +27,7 @@ export default function BrandShowcase({ selectedBrand, onSelectBrand }: Props) {
               Top Paint Brands
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Explore premium quality paints from trusted national &amp; global manufacturers.
+              Explore premium quality paints from trusted manufacturers.
             </p>
           </div>
 
@@ -76,47 +42,52 @@ export default function BrandShowcase({ selectedBrand, onSelectBrand }: Props) {
           )}
         </div>
 
-        {/* Brand Cards Grid */}
+        {/* Brand Cards Grid - ONLY shows brands added in admin panel */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {brands.map((brand) => {
-            const info = brandLogos[brand.name] || {
-              logoText: brand.name,
-              color: '#334155',
-              bg: 'bg-slate-50 text-slate-800',
-              sub: brand.popularSeries,
-            };
             const isSelected = selectedBrand === brand.name;
+            const accentColor = brand.accentColor || '#1e293b';
 
             return (
               <button
-                key={brand.id}
+                key={brand.id || brand.name}
+                type="button"
                 onClick={() => {
                   onSelectBrand(isSelected ? 'All' : brand.name);
                   const el = document.getElementById('colours-section');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className={`group relative p-5 rounded-2xl border text-center flex flex-col items-center justify-between transition-all duration-300 h-36 ${
+                className={`group relative p-5 rounded-2xl border text-center flex flex-col items-center justify-between transition-all duration-300 min-h-[144px] ${
                   isSelected
                     ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30 shadow-md'
                     : 'border-slate-200/90 hover:border-slate-300 bg-white hover:shadow-lg hover:shadow-slate-900/5'
                 }`}
               >
                 {/* Brand Visual Identity */}
-                <div className="flex-1 flex flex-col items-center justify-center">
+                <div className="flex-1 flex flex-col items-center justify-center w-full px-1">
+                  {brand.logoUrl ? (
+                    <img
+                      src={brand.logoUrl}
+                      alt={brand.name}
+                      className="max-h-10 max-w-[120px] object-contain mb-2"
+                    />
+                  ) : null}
+
                   <div
-                    className="text-base sm:text-lg font-black tracking-tighter"
-                    style={{ color: info.color }}
+                    className="text-base sm:text-lg font-black tracking-tighter truncate max-w-full"
+                    style={{ color: accentColor }}
                   >
                     {brand.name}
                   </div>
-                  <span className="text-[10px] font-medium text-slate-400 mt-1 truncate max-w-[120px]">
-                    {info.sub}
+
+                  <span className="text-[10px] font-medium text-slate-500 mt-1 line-clamp-2 max-w-[140px] leading-tight">
+                    {brand.tagline || brand.popularSeries || 'Quality Paints'}
                   </span>
                 </div>
 
                 {/* Arrow Icon button bottom */}
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                  className={`mt-2 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
                     isSelected
                       ? 'bg-amber-600 text-white'
                       : 'bg-slate-50 text-slate-400 group-hover:bg-slate-900 group-hover:text-white'
