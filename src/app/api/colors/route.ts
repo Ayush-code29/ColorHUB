@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
+
 import { connectDB } from "@/lib/mongodb";
 import { isAdminAuthenticated } from "@/lib/adminAuth";
 import PaintColor from "@/models/PaintColor";
@@ -27,45 +29,72 @@ const PAINT_FINISHES = [
   "Eggshell",
 ] as const;
 
-function normalizeCategory(value: unknown): PaintCategory {
-  if (
-    typeof value === "string" &&
-    PAINT_CATEGORIES.includes(value as PaintCategory)
-  ) {
-    return value as PaintCategory;
-  }
+type PaintFinish = (typeof PAINT_FINISHES)[number];
 
+function normalizeCategory(value: unknown): PaintCategory {
   if (typeof value !== "string") {
     return "acrylic";
   }
 
-  switch (value.toLowerCase().trim()) {
+  const normalized = value.trim().toLowerCase();
+
+  switch (normalized) {
+    case "emulsion":
+    case "emulsive":
     case "interior":
     case "wall":
-    case "emulsive":
     case "other":
-    case "emulsion":
       return "emulsion";
 
-    case "exterior":
-    case "cement":
-      return "cement";
-
+    case "enamel":
     case "wood":
     case "metal":
-    case "enamel":
       return "enamel";
-
-    case "texture":
-    case "acrylic":
-      return "acrylic";
 
     case "distemper":
       return "distemper";
 
+    case "cement":
+    case "exterior":
+      return "cement";
+
+    case "acrylic":
+    case "texture":
+      return "acrylic";
+
     default:
       return "acrylic";
   }
+}
+
+function parseCategory(value: unknown): PaintCategory | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  return PAINT_CATEGORIES.includes(normalized as PaintCategory)
+    ? (normalized as PaintCategory)
+    : null;
+}
+
+function parseFinish(value: unknown): PaintFinish | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  const finishMap: Record<string, PaintFinish> = {
+    matte: "Matte",
+    satin: "Satin",
+    gloss: "Gloss",
+    texture: "Texture",
+    eggshell: "Eggshell",
+  };
+
+  return finishMap[normalized] ?? null;
 }
 
 async function migrateLegacyColors() {
@@ -98,8 +127,12 @@ async function migrateLegacyColors() {
       } else if (oldBrand === "birla opus" && birla) {
         update.brand = birla._id;
       } else {
-        // Preserve unknown legacy brand names by not replacing them
-        // with an unrelated brand.
+        // Preserve unknown brand references while normalizing category.
+        await PaintColor.updateOne(
+          { _id: color._id },
+          { $set: update }
+        );
+
         continue;
       }
     }
@@ -113,15 +146,47 @@ async function migrateLegacyColors() {
 
 function serializeColor(color: any) {
   const brand =
-    color.brand && typeof color.brand === "object" ? color.brand : null;
+    color?.brand && typeof color.brand === "object"
+      ? color.brand
+      : null;
 
   return {
     ...color,
     id: color.id,
-    brand: brand?.name ?? (typeof color.brand === "string" ? color.brand : ""),
+    brand:
+      brand?.name ??
+      (typeof color?.brand === "string" ? color.brand : ""),
     brandId: brand?._id ? String(brand._id) : "",
-    category: normalizeCategory(color.category),
+    category: normalizeCategory(color?.category),
   };
+}
+
+/**
+ * Resolve a brand using either its MongoDB ID or its name.
+ * This supports dropdowns that submit either value format.
+ */
+async function findSelectedBrand(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const selectedValue = value.trim();
+
+  if (mongoose.isValidObjectId(selectedValue)) {
+    const brandById = await Brand.findById(selectedValue);
+
+    if (brandById) {
+      return brandById;
+    }
+  }
+
+  const normalizedName = selectedValue
+    .toLocaleLowerCase("en")
+    .replace(/\s+/g, " ");
+
+  return Brand.findOne({
+    normalizedName,
+  });
 }
 
 export async function GET() {
@@ -154,7 +219,7 @@ export async function GET() {
         category: normalizeCategory(color.category),
       }));
 
-      if (seed.length) {
+      if (seed.length > 0) {
         await PaintColor.insertMany(seed);
       }
 
@@ -186,43 +251,53 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const name = typeof body.name === "string" ? body.name.trim() : "";
-    const code = typeof body.code === "string" ? body.code.trim() : "";
-    const hex = typeof body.hex === "string" ? body.hex.toUpperCase() : "";
-    const price = Number(body.pricePer4L);
-    const category = body.category;
-    const finish = body.finish;
-    const brandName = typeof body.brand === "string" ? body.brand.trim() : "";
+    const name =
+      typeof body.name === "string" ? body.name.trim() : "";
+
+    const code =
+      typeof body.code === "string" ? body.code.trim() : "";
+
+    const hex =
+      typeof body.hex === "string"
+        ? body.hex.trim().toUpperCase()
+        : "";
+
+    const category = parseCategory(body.category);
+    const finish = parseFinish(body.finish);
+
+    const price =
+      body.pricePer4L === "" || body.pricePer4L == null
+        ? NaN
+        : Number(body.pricePer4L);
 
     if (!name || !code || !/^#[0-9A-F]{6}$/.test(hex)) {
       return NextResponse.json(
-        { message: "Valid name, code, and hex colour are required." },
+        {
+          message:
+            "Valid name, code, and hex colour are required.",
+        },
         { status: 400 }
       );
     }
 
-    if (
-      body.pricePer4L === "" ||
-      body.pricePer4L == null ||
-      !Number.isFinite(price) ||
-      price < 0
-    ) {
+    if (!Number.isFinite(price) || price < 0) {
       return NextResponse.json(
         { message: "Enter a valid non-negative price." },
         { status: 400 }
       );
     }
 
-    if (
-      typeof category !== "string" ||
-      !PAINT_CATEGORIES.includes(category as PaintCategory) ||
-      typeof finish !== "string" ||
-      !PAINT_FINISHES.includes(
-        finish as (typeof PAINT_FINISHES)[number]
-      )
-    ) {
+    if (!category || !finish) {
       return NextResponse.json(
-        { message: "Invalid category or finish." },
+        {
+          message: "Invalid category or finish.",
+          allowedCategories: PAINT_CATEGORIES,
+          allowedFinishes: PAINT_FINISHES,
+          received: {
+            category: body.category ?? null,
+            finish: body.finish ?? null,
+          },
+        },
         { status: 400 }
       );
     }
@@ -230,20 +305,26 @@ export async function POST(request: NextRequest) {
     await connectDB();
     await ensureDefaultBrands();
 
-    const brand = await Brand.findOne({
-      normalizedName: brandName.toLocaleLowerCase("en"),
-    });
+    // Accept either the MongoDB brand ID or the brand name.
+    const brand = await findSelectedBrand(body.brand);
 
     if (!brand) {
       return NextResponse.json(
-        { message: "Select a valid brand." },
+        {
+          message:
+            "Selected brand was not found. Refresh the page and select the brand again.",
+          receivedBrand: body.brand ?? null,
+        },
         { status: 400 }
       );
     }
 
-    const id = `${name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")}-${randomUUID().slice(0, 8)}`;
+    const slug = name
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/^-+|-+$/g, "");
+
+const id = slug + "-" + randomUUID().slice(0, 8);
 
     const created = await PaintColor.create({
       id,
@@ -251,13 +332,17 @@ export async function POST(request: NextRequest) {
       code,
       brand: brand._id,
       hex,
-      category: category as PaintCategory,
+      category,
       finish,
       pricePer4L: price,
       description:
-        typeof body.description === "string" ? body.description.trim() : "",
+        typeof body.description === "string"
+          ? body.description.trim()
+          : "",
       roomImage:
-        typeof body.roomImage === "string" ? body.roomImage.trim() : "",
+        typeof body.roomImage === "string"
+          ? body.roomImage.trim()
+          : "",
       wallMaskType: body.wallMaskType,
       isPopular: body.isPopular === true,
       isNew: body.isNew === true,
@@ -270,12 +355,18 @@ export async function POST(request: NextRequest) {
       .populate("brand", "name")
       .lean();
 
-    return NextResponse.json(serializeColor(populated), { status: 201 });
+    return NextResponse.json(
+      serializeColor(populated),
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Failed to create colour:", error);
 
     return NextResponse.json(
-      { message: "Unable to add colour. Please check the submitted data." },
+      {
+        message:
+          "Unable to add colour. Please check the submitted data.",
+      },
       { status: 500 }
     );
   }
