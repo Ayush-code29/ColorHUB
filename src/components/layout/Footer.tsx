@@ -2,60 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Palette, Phone, Mail, MapPin, ShieldCheck, Truck, Headphones, RotateCcw } from 'lucide-react';
+import { Palette, Phone, Mail, MapPin } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
 export default function Footer() {
   const { openConsultationModal, openCalculatorModal } = useStore();
 
   return (
-    <footer className="bg-slate-900 text-white pt-16 pb-12 border-t border-slate-800">
+    <footer className="bg-slate-900 text-white pt-12 pb-12 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Value Props Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-12 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">100% Genuine</h4>
-              <p className="text-[11px] text-slate-400">Factory sealed original cans</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
-              <Truck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Fast Delivery</h4>
-              <p className="text-[11px] text-slate-400">Doorstep delivery within 24-48 hrs</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-              <Headphones className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Expert Advice</h4>
-              <p className="text-[11px] text-slate-400">Certified paint specialists</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
-              <RotateCcw className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Easy Exchange</h4>
-              <p className="text-[11px] text-slate-400">Unopened tint cans support</p>
-            </div>
-          </div>
-        </div>
-
         {/* Links Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand info */}
           <div className="md:col-span-2 space-y-4">
             <div className="flex items-center gap-2.5">
