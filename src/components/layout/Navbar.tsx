@@ -7,6 +7,7 @@ import {
   Search,
   ShoppingBag,
   Heart,
+  LayoutDashboard,
   Calculator,
   Sparkles,
   Menu,
