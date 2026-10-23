@@ -370,6 +370,13 @@ export default function Navbar() {
             >
               Offers
             </a>
+
+            <a
+              href="#shade-cards-section"
+              className={`${navLinkClass} text-amber-700 hover:border-amber-700 hover:text-amber-800 font-semibold`}
+            >
+              Shade Cards
+            </a>
           </nav>
         </div>
       </div>
@@ -442,6 +449,17 @@ export default function Navbar() {
               className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50"
             >
               Offers
+            </a>
+
+            <a
+              href="#shade-cards-section"
+              onClick={closeMobileMenu}
+              className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-50"
+            >
+              <span>Shade Cards (PDF)</span>
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-900">
+                5 PDFs
+              </span>
             </a>
           </nav>
         </div>

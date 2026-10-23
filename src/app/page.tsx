@@ -8,6 +8,7 @@ import BrandShowcase from '@/components/home/BrandShowcase';
 import ColourExplorer from '@/components/colours/ColourExplorer';
 import RoomVisualizer from '@/components/visualizer/RoomVisualizer';
 import InspirationGallery from '@/components/gallery/InspirationGallery';
+import ShadeCardsSection from '@/components/home/ShadeCardsSection';
 import Footer from '@/components/layout/Footer';
 import { PaintBrand } from '@/types';
 
@@ -42,7 +43,10 @@ export default function HomePage() {
           onSelectBrand={(brand) => setSelectedBrand(brand)}
         />
 
-        {/* 6. Inspiration Gallery (bottom-left mockup) */}
+        {/* 6. Official Downloadable Shade Cards & Colour Books */}
+        <ShadeCardsSection />
+
+        {/* 7. Inspiration Gallery (bottom-left mockup) */}
         <InspirationGallery />
       </main>
 
