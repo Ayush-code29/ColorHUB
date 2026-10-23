@@ -7,7 +7,6 @@ import {
   Search,
   ShoppingBag,
   Heart,
-  LayoutDashboard,
   Calculator,
   Sparkles,
   Menu,
@@ -445,17 +444,6 @@ export default function Navbar() {
               Offers
             </a>
           </nav>
-
-          <div className="mt-3 border-t border-slate-100 pt-4">
-            <Link
-              href="/admin"
-              onClick={closeMobileMenu}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-            >
-              <LayoutDashboard className="h-4 w-4 text-amber-400" />
-              Admin Portal
-            </Link>
-          </div>
         </div>
       )}
     </header>

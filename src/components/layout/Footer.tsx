@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { Palette, Phone, Mail, MapPin } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
@@ -63,7 +62,6 @@ export default function Footer() {
               <li><button onClick={openCalculatorModal} className="hover:text-amber-400 transition-colors">Paint Quantity Calculator</button></li>
               <li><button onClick={openConsultationModal} className="hover:text-amber-400 transition-colors">Free Home Consultation</button></li>
               <li><a href="#inspiration-section" className="hover:text-amber-400 transition-colors">Room Palette Ideas</a></li>
-              <li><Link href="/admin" className="text-amber-400 font-semibold hover:underline">Admin Dashboard</Link></li>
             </ul>
           </div>
 
