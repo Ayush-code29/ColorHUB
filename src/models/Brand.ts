@@ -20,10 +20,7 @@ const BrandSchema = new Schema(
       default: "",
       maxlength: 180,
     },
-    logoUrl: {
-      type: String,
-      default: "",
-    },
+    
     accentColor: {
       type: String,
       default: "#D97706",

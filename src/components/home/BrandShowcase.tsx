@@ -65,13 +65,7 @@ export default function BrandShowcase({ selectedBrand, onSelectBrand }: Props) {
               >
                 {/* Brand Visual Identity */}
                 <div className="flex-1 flex flex-col items-center justify-center w-full px-1">
-                  {brand.logoUrl ? (
-                    <img
-                      src={brand.logoUrl}
-                      alt={brand.name}
-                      className="max-h-10 max-w-[120px] object-contain mb-2"
-                    />
-                  ) : null}
+                  
 
                   <div
                     className="text-base sm:text-lg font-black tracking-tighter truncate max-w-full"
