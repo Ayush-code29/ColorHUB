@@ -1,56 +1,80 @@
+
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+
 import Navbar from '@/components/layout/Navbar';
 import HeroBanner from '@/components/home/HeroBanner';
 import PromoCards from '@/components/home/PromoCards';
 import BrandShowcase from '@/components/home/BrandShowcase';
+import OurWork from '@/components/home/OurWork';
 import ColourExplorer from '@/components/colours/ColourExplorer';
 import RoomVisualizer from '@/components/visualizer/RoomVisualizer';
-import InspirationGallery from '@/components/gallery/InspirationGallery';
 import ShadeCardsSection from '@/components/home/ShadeCardsSection';
+import InspirationGallery from '@/components/gallery/InspirationGallery';
 import Footer from '@/components/layout/Footer';
-import { PaintBrand } from '@/types';
+
+import type { PaintBrand } from '@/types';
 
 export default function HomePage() {
-  const [selectedBrand, setSelectedBrand] = useState<PaintBrand | 'All'>('All');
+  const [selectedBrand, setSelectedBrand] = useState<PaintBrand | 'All'>(
+    'All'
+  );
+
+  const handleBrandSelect = (brand: PaintBrand | 'All') => {
+    setSelectedBrand(brand);
+  };
+
+  const handleViewShades = (brand: PaintBrand | 'All') => {
+    setSelectedBrand(brand);
+
+    // Scroll after the selected brand state has been updated.
+    requestAnimationFrame(() => {
+      document.getElementById('colours-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-amber-100 selection:text-amber-900">
-      {/* Navigation */}
+    <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900 selection:bg-amber-100 selection:text-amber-900">
       <Navbar />
 
-      {/* Main Content */}
       <main className="flex-1">
-        {/* 1. Hero Banner (top-left mockup) */}
+        {/* 1. Hero */}
         <HeroBanner />
 
-        {/* 2. Promo Cards Row (Festive 30%, Free Consultation, New Arrivals) */}
+        {/* 2. Promotional cards */}
         <PromoCards />
 
-        {/* 3. Top Paint Brands (middle-left mockup) */}
+        {/* 3. Brand selection */}
         <BrandShowcase
           selectedBrand={selectedBrand}
-          onSelectBrand={(brand) => setSelectedBrand(brand)}
+          onSelectBrand={handleBrandSelect}
         />
 
-        {/* 4. Room Colour Visualizer (middle-center mockup) */}
+        {/* 4. Room colour visualizer */}
         <RoomVisualizer />
 
-        {/* 5. Explore Colours Catalogue (top-right mockup) */}
-        <ColourExplorer
-          selectedBrand={selectedBrand}
-          onSelectBrand={(brand) => setSelectedBrand(brand)}
-        />
+        {/* 5. Admin-managed work gallery */}
+        <OurWork onSelectBrand={handleViewShades} />
 
-        {/* 6. Official Downloadable Shade Cards & Colour Books */}
+        {/* 6. Colour catalogue */}
+        <section id="colours-section" className="scroll-mt-24">
+          <ColourExplorer
+            selectedBrand={selectedBrand}
+            onSelectBrand={handleBrandSelect}
+          />
+        </section>
+
+        {/* 7. Downloadable shade cards and colour books */}
         <ShadeCardsSection />
 
-        {/* 7. Inspiration Gallery (bottom-left mockup) */}
+        {/* 8. Inspiration gallery */}
         <InspirationGallery />
       </main>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
