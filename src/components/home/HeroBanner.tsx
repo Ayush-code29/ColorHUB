@@ -1,147 +1,192 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight, Sparkles, ShieldCheck, Palette } from 'lucide-react';
-import { useStore } from '@/context/StoreContext';
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
+import { useStore } from "@/context/StoreContext";
 
-const HERO_SLIDES = [
-  {
-    title: 'Beautiful Spaces Start with the Right Colour',
-    subtitle: 'Explore premium paints, expert advice and find the perfect colour for your home.',
-    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
-    accentShade: 'Terracotta • AP-450',
-    accentHex: '#BE674B',
-  },
-  {
-    title: 'Tranquil Bedrooms Crafted in Fresh Botanical Hues',
-    subtitle: 'Ultra-smooth low-odour luxury emulsions engineered for restful, restorative sleep.',
-    image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1800&q=85',
-    accentShade: 'Sage Green • AP-234',
-    accentHex: '#9EAA96',
-  },
-  {
-    title: 'Warm Architectural Neutrals for Modern Living',
-    subtitle: 'Timeless tones that reflect natural sunlight and complement contemporary wooden furnishings.',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=85',
-    accentShade: 'Warm Beige • BRG-112',
-    accentHex: '#D5C4A1',
-  },
-];
+type HeroSlide = {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  accentShade: string;
+  accentHex: string;
+};
 
 export default function HeroBanner() {
+  const [slides, setSlides] = useState<HeroSlide[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   const { openConsultationModal } = useStore();
 
+  const loadSlides = useCallback(async () => {
+    try {
+      const response = await fetch("/api/hero-slides", {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to fetch hero slides.");
+      }
+
+      const data = await response.json();
+
+      setSlides(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Hero slides loading failed:", error);
+      setSlides([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadSlides();
+  }, [loadSlides]);
+
+  useEffect(() => {
+    if (currentSlide >= slides.length) {
+      setCurrentSlide(0);
+    }
+  }, [currentSlide, slides.length]);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setCurrentSlide((previous) => (previous + 1) % slides.length);
+    }, 7000);
+
+    return () => window.clearInterval(timer);
+  }, [slides.length]);
+
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    if (slides.length <= 1) return;
+
+    setCurrentSlide((previous) => (previous + 1) % slides.length);
   };
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+    if (slides.length <= 1) return;
+
+    setCurrentSlide(
+      (previous) => (previous - 1 + slides.length) % slides.length
+    );
   };
 
-  useEffect(() => {
-    const timer = setInterval(nextSlide, 7000);
-    return () => clearInterval(timer);
-  }, []);
+  if (loading || slides.length === 0) {
+    return null;
+  }
 
-  const slide = HERO_SLIDES[currentSlide];
+  const slide = slides[currentSlide];
 
   return (
     <section className="relative overflow-hidden bg-slate-900">
-      {/* Background Slides */}
-      <div className="relative h-[480px] sm:h-[540px] md:h-[620px] w-full">
-        {HERO_SLIDES.map((item, idx) => (
+      <div className="relative h-[480px] w-full sm:h-[540px] md:h-[620px]">
+        {slides.map((item, index) => (
           <div
-            key={idx}
+            key={item.id}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              idx === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              index === currentSlide
+                ? "opacity-100"
+                : "pointer-events-none opacity-0"
             }`}
           >
             <img
               src={item.image}
               alt={item.title}
-              className="w-full h-full object-cover brightness-[0.82]"
+              fetchPriority={index === currentSlide ? "high" : "auto"}
+              loading={index === currentSlide ? "eager" : "lazy"}
+              className="h-full w-full object-cover brightness-[0.82]"
             />
-            {/* Subtle luxury vignette & gradient */}
+
             <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           </div>
         ))}
 
-        {/* Content Overlay */}
-        <div className="relative z-10 max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
-          <div className="max-w-2xl text-white space-y-5">
-            {/* Live active shade pill */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs font-semibold shadow-md">
+        <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-center px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl space-y-5 text-white">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white shadow-md backdrop-blur-md">
               <span
-                className="w-3 h-3 rounded-full border border-white/40"
+                className="h-3 w-3 rounded-full border border-white/40"
                 style={{ backgroundColor: slide.accentHex }}
               />
               <span>Featured Shade: {slide.accentShade}</span>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.12] drop-shadow-sm">
+            <h1 className="text-3xl font-extrabold leading-[1.12] tracking-tight drop-shadow-sm sm:text-5xl lg:text-6xl">
               {slide.title}
             </h1>
 
-            {/* Subtitle */}
-            <p className="text-sm sm:text-base md:text-lg text-slate-200 font-normal max-w-xl leading-relaxed drop-shadow-xs">
+            <p className="max-w-xl text-sm font-normal leading-relaxed text-slate-200 drop-shadow-xs sm:text-base md:text-lg">
               {slide.subtitle}
             </p>
 
-            {/* Call to Actions */}
-            <div className="pt-2 flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-3 pt-2 sm:gap-4">
               <a
                 href="#colours-section"
-                className="px-6 py-3.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-600/30 flex items-center gap-2 transition-all hover:translate-x-0.5"
+                className="flex items-center gap-2 rounded-xl bg-amber-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-amber-600/30 transition-all hover:translate-x-0.5 hover:bg-amber-500"
               >
                 <span>Explore Colours</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="h-4 w-4" />
               </a>
 
               <a
                 href="#room-visualizer"
-                className="px-5 py-3.5 bg-white/15 hover:bg-white/25 text-white backdrop-blur-md border border-white/30 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors"
+                className="flex items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-5 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/25"
               >
-                <Sparkles className="w-4 h-4 text-amber-300" />
+                <Sparkles className="h-4 w-4 text-amber-300" />
                 <span>Test in Room Visualizer</span>
               </a>
             </div>
           </div>
         </div>
 
-        {/* Slider Controls (Arrows) */}
-        <button
-          onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md flex items-center justify-center transition-all border border-white/20 shadow-md"
-          aria-label="Previous Slide"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        <button
-          onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md flex items-center justify-center transition-all border border-white/20 shadow-md"
-          aria-label="Next Slide"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-
-        {/* Slider Indicator Dots */}
-        <div className="absolute bottom-6 inset-x-0 z-20 flex justify-center items-center gap-2">
-          {HERO_SLIDES.map((_, idx) => (
+        {slides.length > 1 && (
+          <>
             <button
-              key={idx}
-              onClick={() => setCurrentSlide(idx)}
-              className={`h-2 rounded-full transition-all ${
-                idx === currentSlide ? 'w-8 bg-amber-500' : 'w-2 bg-white/50 hover:bg-white/80'
-              }`}
-              aria-label={`Slide ${idx + 1}`}
-            />
-          ))}
-        </div>
+              type="button"
+              onClick={prevSlide}
+              aria-label="Previous slide"
+              className="absolute left-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/20 text-white shadow-md backdrop-blur-md transition-all hover:bg-white/40"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+
+            <button
+              type="button"
+              onClick={nextSlide}
+              aria-label="Next slide"
+              className="absolute right-4 top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/20 text-white shadow-md backdrop-blur-md transition-all hover:bg-white/40"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+
+            <div className="absolute inset-x-0 bottom-6 z-20 flex items-center justify-center gap-2">
+              {slides.map((item, index) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setCurrentSlide(index)}
+                  aria-label={`Go to slide ${index + 1}`}
+                  aria-current={index === currentSlide}
+                  className={`h-2 rounded-full transition-all ${
+                    index === currentSlide
+                      ? "w-8 bg-amber-500"
+                      : "w-2 bg-white/50 hover:bg-white/80"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

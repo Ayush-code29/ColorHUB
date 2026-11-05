@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/context/StoreContext";
 import WorkManagement from "@/components/admin/WorkManagement";
+import HeroBannerManagement from "@/components/admin/HeroBannerManagement";
 import {
   Palette,
   LayoutDashboard,
@@ -21,6 +22,7 @@ import {
   Mail,
   MapPin,
   Images,
+  ImagePlus,
 } from "lucide-react";
 
 type AdminTab =
@@ -28,7 +30,8 @@ type AdminTab =
   | "colours"
   | "orders"
   | "inquiries"
-  | "work";
+  | "work"
+  | "hero";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -142,6 +145,11 @@ export default function AdminDashboard() {
       label: "Our Work Gallery",
       icon: Images,
     },
+    {
+      id: "hero",
+      label: "Hero Banner Images",
+      icon: ImagePlus,
+    },
   ];
 
   return (
@@ -181,6 +189,7 @@ export default function AdminDashboard() {
                 }`}
               >
                 <Icon className="h-4 w-4" />
+
                 <span>{item.label}</span>
 
                 {item.count !== undefined && (
@@ -240,13 +249,17 @@ export default function AdminDashboard() {
                     ? "Consultation Leads"
                     : activeTab === "orders"
                       ? "Orders"
-                      : "Our Work Gallery"}
+                      : activeTab === "hero"
+                        ? "Hero Banner Images"
+                        : "Our Work Gallery"}
             </h1>
 
             <p className="mt-1 text-xs text-slate-500">
               {activeTab === "work"
                 ? "Manage project photos and the inspiration gallery displayed on your homepage."
-                : "Store management, catalogue updates, pricing and customer orders."}
+                : activeTab === "hero"
+                  ? "Manage homepage hero slides, images and featured content."
+                  : "Store management, catalogue updates, pricing and customer orders."}
             </p>
           </div>
 
@@ -261,7 +274,7 @@ export default function AdminDashboard() {
               {loggingOut ? "Logging out..." : "Logout"}
             </button>
 
-            {activeTab !== "work" && (
+            {activeTab !== "work" && activeTab !== "hero" && (
               <button
                 type="button"
                 onClick={() => openAdminAddModal()}
@@ -602,6 +615,9 @@ export default function AdminDashboard() {
 
         {/* Our Work Gallery */}
         {activeTab === "work" && <WorkManagement />}
+
+        {/* Homepage Hero Banner Management */}
+        {activeTab === "hero" && <HeroBannerManagement />}
       </main>
     </div>
   );
